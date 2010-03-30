@@ -16,6 +16,12 @@
     <name>cids maven2 plugin</name>
     <description>Simple maven2 plugin that helps with several cids related maven actions</description>
 
+    <scm>
+        <connection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/cids/cids-maven-plugin/trunk</connection>
+        <developerConnection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/cids/cids-maven-plugin/trunk</developerConnection>
+        <url>http://repositories:8082/central/browse/de/cismet/cids/cids-maven-plugin/trunk</url>
+    </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.maven</groupId>
