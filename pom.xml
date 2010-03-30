@@ -21,6 +21,18 @@
         <developerConnection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/cids/cids-maven-plugin/trunk</developerConnection>
         <url>http://repositories:8082/central/browse/de/cismet/cids/cids-maven-plugin/trunk</url>
     </scm>
+    <distributionManagement>
+        <repository>
+            <id>cismet-eig-repo</id>
+            <name>cismet-libs-releases-local</name>
+            <url>http://repositories:8081/artifactory/plugins-releases-local</url>
+        </repository>
+        <snapshotRepository>
+            <id>cismet-eig-repo</id>
+            <name>cismet-libs-snapshots-local</name>
+            <url>http://repositories:8081/artifactory/plugins-snapshots-local</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <dependencies>
         <dependency>
