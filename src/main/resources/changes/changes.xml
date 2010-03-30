@@ -4,6 +4,9 @@
         <release version="1.0" date="2010-03-30" description="Subsequent release" >
             <action dev="Martin Scholl" type="fix" issue="1435">initial release</action>
             <action dev="Martin Scholl" type="fix" issue="1436">add release information</action>
+            <action dev="Martin Scholl" type="fix" issue="1437">add scm information</action>
+            <action dev="Martin Scholl" type="fix" issue="1438">add distribution management information</action>
+            <action dev="Martin Scholl" type="fix" issue="1439">update to cismet-parent 1.0 parent</action>
         </release>
     </body>
 </document>
