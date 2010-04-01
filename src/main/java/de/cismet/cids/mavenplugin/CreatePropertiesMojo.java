@@ -69,19 +69,31 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         }
 
         // collect local jars and append them to the classpath string
-        final File[] jars = libLocalDir.listFiles(
-                new FileFilter() {
+        if (libLocalDir.exists()) {
+            final File[] jars = libLocalDir.listFiles(
+                    new FileFilter() {
 
-                    @Override
-                    public boolean accept(final File pathname) {
-                        return pathname.getName().toLowerCase().endsWith(".jar"); // NOI18N
+                        @Override
+                        public boolean accept(final File pathname) {
+                            return pathname.getName().toLowerCase().endsWith(".jar"); // NOI18N
+                        }
+                    });
+            if (jars == null) {
+                if (getLog().isWarnEnabled()) {
+                    getLog().warn("an I/O error occured while fetching jars from lib local folder: " + libLocalDir); // NOI18N
+                }
+            } else {
+                for (final File jar : jars) {
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug("add jar: " + jar);                            // NOI18N
                     }
-                });
-        for (final File jar : jars) {
-            if (getLog().isDebugEnabled()) {
-                getLog().debug("add jar: " + jar);                                // NOI18N
+                    sb.append(jar.getAbsolutePath()).append(':');
+                }
             }
-            sb.append(jar.getAbsolutePath()).append(':');
+        } else {
+            if (getLog().isWarnEnabled()) {
+                getLog().warn("lib local dir property does not denote an existing filename: " + libLocalDir); // NOI18N
+            }
         }
 
         // remove the last colon
