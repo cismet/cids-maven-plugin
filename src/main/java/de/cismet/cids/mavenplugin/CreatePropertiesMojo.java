@@ -10,7 +10,6 @@ package de.cismet.cids.mavenplugin;
 import java.io.File;
 import java.io.FileFilter;
 
-import java.util.List;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -60,7 +59,7 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
      * </ul>
      */
     private void createClasspathProperty() {
-        final StringBuffer sb = new StringBuffer();
+        final StringBuilder sb = new StringBuilder();
 
         // first add the project's output directory
         sb.append(project.getBuild().getOutputDirectory()).append(File.pathSeparatorChar);
@@ -72,15 +71,17 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         }
 
         // also collect system artifacts and append them to the classpath string
-        final List systemArtifacts = project.getSystemArtifacts();
-        if (!systemArtifacts.isEmpty()) {
-            if (getLog().isWarnEnabled()) {
-                getLog().warn("adding system dependent libraries to classpath"); // NOI18N
-            }
-            for (final Object o : systemArtifacts) {
-                final Artifact artifact = (Artifact)o;
+        // we will have to iterate over all dependency artifacts because project.getSystemArtifacts() is a trap...
+        boolean first = true;
+        for (final Object o : project.getDependencyArtifacts()) {
+            final Artifact artifact = (Artifact)o;
+            if (Artifact.SCOPE_SYSTEM.equals(artifact.getScope())) {
+                if (first && getLog().isWarnEnabled()) {
+                    getLog().warn("adding system dependent libraries to classpath"); // NOI18N
+                    first = false;
+                }
                 if (getLog().isDebugEnabled()) {
-                    getLog().debug("system-dependent library: " + artifact);     // NOI18N
+                    getLog().debug("system-dependent library: " + artifact);         // NOI18N
                 }
                 sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
             }
