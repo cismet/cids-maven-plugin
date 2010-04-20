@@ -10,6 +10,8 @@ package de.cismet.cids.mavenplugin;
 import java.io.File;
 import java.io.FileFilter;
 
+import java.util.List;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 
@@ -53,6 +55,7 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
      * <ul>
      *   <li>the project's output directory</li>
      *   <li>the project's runtime artifacts</li>
+     *   <li>the project's system artifacts</li>
      *   <li>all jars within the folder specified by <code>de.cismet.cids.lib.local</code> property</li>
      * </ul>
      */
@@ -60,12 +63,27 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         final StringBuffer sb = new StringBuffer();
 
         // first add the project's output directory
-        sb.append(projectmy.getBuild().getOutputDirectory()).append(File.pathSeparatorChar);
+        sb.append(project.getBuild().getOutputDirectory()).append(File.pathSeparatorChar);
 
         // collect runtime artifacts and appending them to the classpath string
-        for (final Object o : projectmy.getRuntimeArtifacts()) {
+        for (final Object o : project.getRuntimeArtifacts()) {
             final Artifact artifact = (Artifact)o;
             sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
+        }
+
+        // also collect system artifacts and append them to the classpath string
+        final List systemArtifacts = project.getSystemArtifacts();
+        if (!systemArtifacts.isEmpty()) {
+            if (getLog().isWarnEnabled()) {
+                getLog().warn("adding system dependent libraries to classpath"); // NOI18N
+            }
+            for (final Object o : systemArtifacts) {
+                final Artifact artifact = (Artifact)o;
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug("system-dependent library: " + artifact);     // NOI18N
+                }
+                sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
+            }
         }
 
         // collect local jars and append them to the classpath string
@@ -100,12 +118,12 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         sb.deleteCharAt(sb.length() - 1);
 
         // double up all '\'
-        final String classpath = sb.toString().replace("\\", "\\\\");
+        final String classpath = sb.toString().replace("\\", "\\\\"); // NOI18N
 
         if (getLog().isInfoEnabled()) {
             getLog().info("created classpath: " + classpath); // NOI18N
         }
 
-        projectmy.getProperties().put(PROP_CIDS_CLASSPATH, classpath);
+        project.getProperties().put(PROP_CIDS_CLASSPATH, classpath);
     }
 }
