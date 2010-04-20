@@ -99,7 +99,9 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         // remove the last colon
         sb.deleteCharAt(sb.length() - 1);
 
-        final String classpath = sb.toString();
+        // double up all '\'
+        final String classpath = sb.toString().replace("\\", "\\\\");
+
         if (getLog().isInfoEnabled()) {
             getLog().info("created classpath: " + classpath); // NOI18N
         }
