@@ -60,12 +60,12 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         final StringBuffer sb = new StringBuffer();
 
         // first add the project's output directory
-        sb.append(projectmy.getBuild().getOutputDirectory()).append(':');
+        sb.append(projectmy.getBuild().getOutputDirectory()).append(File.pathSeparatorChar);
 
         // collect runtime artifacts and appending them to the classpath string
         for (final Object o : projectmy.getRuntimeArtifacts()) {
             final Artifact artifact = (Artifact)o;
-            sb.append(artifact.getFile().getAbsolutePath()).append(':');
+            sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
         }
 
         // collect local jars and append them to the classpath string
@@ -87,7 +87,7 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
                     if (getLog().isDebugEnabled()) {
                         getLog().debug("add jar: " + jar);                            // NOI18N
                     }
-                    sb.append(jar.getAbsolutePath()).append(':');
+                    sb.append(jar.getAbsolutePath()).append(File.pathSeparatorChar);
                 }
             }
         } else {
