@@ -31,5 +31,5 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @required   true
      * @readonly   true
      */
-    protected MavenProject projectmy;
+    protected MavenProject project;
 }

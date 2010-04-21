@@ -53,45 +53,80 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
      * <ul>
      *   <li>the project's output directory</li>
      *   <li>the project's runtime artifacts</li>
+     *   <li>the project's system artifacts</li>
      *   <li>all jars within the folder specified by <code>de.cismet.cids.lib.local</code> property</li>
      * </ul>
      */
     private void createClasspathProperty() {
-        final StringBuffer sb = new StringBuffer();
+        final StringBuilder sb = new StringBuilder();
 
         // first add the project's output directory
-        sb.append(projectmy.getBuild().getOutputDirectory()).append(':');
+        sb.append(project.getBuild().getOutputDirectory()).append(File.pathSeparatorChar);
 
-        // collect runtime artifacts and appending them to the classpath string
-        for (final Object o : projectmy.getRuntimeArtifacts()) {
+        // collect runtime artifacts and append them to the classpath string
+        for (final Object o : project.getRuntimeArtifacts()) {
             final Artifact artifact = (Artifact)o;
-            sb.append(artifact.getFile().getAbsolutePath()).append(':');
+            sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
+        }
+
+        // also collect system artifacts and append them to the classpath string [issue:1456]
+        // we will have to iterate over all dependency artifacts because project.getSystemArtifacts() is a trap...
+        boolean first = true;
+        for (final Object o : project.getDependencyArtifacts()) {
+            final Artifact artifact = (Artifact)o;
+            if (Artifact.SCOPE_SYSTEM.equals(artifact.getScope())) {
+                if (first && getLog().isWarnEnabled()) {
+                    getLog().warn("adding system dependent libraries to classpath"); // NOI18N
+                    first = false;
+                }
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug("system-dependent library: " + artifact);         // NOI18N
+                }
+                sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
+            }
         }
 
         // collect local jars and append them to the classpath string
-        final File[] jars = libLocalDir.listFiles(
-                new FileFilter() {
+        if (libLocalDir.exists()) {
+            final File[] jars = libLocalDir.listFiles(
+                    new FileFilter() {
 
-                    @Override
-                    public boolean accept(final File pathname) {
-                        return pathname.getName().toLowerCase().endsWith(".jar"); // NOI18N
+                        @Override
+                        public boolean accept(final File pathname) {
+                            return pathname.getName().toLowerCase().endsWith(".jar"); // NOI18N
+                        }
+                    });
+            if (jars == null) {
+                if (getLog().isWarnEnabled()) {
+                    getLog().warn("an I/O error occured while fetching jars from lib local folder: " + libLocalDir); // NOI18N
+                }
+            } else {
+                for (final File jar : jars) {
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug("add jar: " + jar);                            // NOI18N
                     }
-                });
-        for (final File jar : jars) {
-            if (getLog().isDebugEnabled()) {
-                getLog().debug("add jar: " + jar);                                // NOI18N
+                    sb.append(jar.getAbsolutePath()).append(File.pathSeparatorChar);
+                }
             }
-            sb.append(jar.getAbsolutePath()).append(':');
+        } else {
+            if (getLog().isWarnEnabled()) {
+                getLog().warn("lib local dir property does not denote an existing filename: " + libLocalDir); // NOI18N
+            }
         }
 
         // remove the last colon
         sb.deleteCharAt(sb.length() - 1);
 
-        final String classpath = sb.toString();
+        // wrap into "" [issue:1457]
+        sb.insert(0, "\"").insert(sb.length(), "\""); // NOI18N
+
+        // double up all '\' [issue:1455]
+        final String classpath = sb.toString().replace("\\", "\\\\"); // NOI18N
+
         if (getLog().isInfoEnabled()) {
             getLog().info("created classpath: " + classpath); // NOI18N
         }
 
-        projectmy.getProperties().put(PROP_CIDS_CLASSPATH, classpath);
+        project.getProperties().put(PROP_CIDS_CLASSPATH, classpath);
     }
 }
