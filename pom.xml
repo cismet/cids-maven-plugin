@@ -9,16 +9,16 @@
 
     <groupId>de.cismet.cids</groupId>
     <artifactId>cids-maven-plugin</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1</version>
     <packaging>maven-plugin</packaging>
 
     <name>cids maven2 plugin</name>
     <description>Simple maven2 plugin that helps with several cids related maven actions</description>
 
     <scm>
-        <connection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/cids/cids-maven-plugin/trunk</connection>
-        <developerConnection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/cids/cids-maven-plugin/trunk</developerConnection>
-        <url>http://repositories:8082/central/browse/de/cismet/cids/cids-maven-plugin/trunk</url>
+        <connection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/cids/cids-maven-plugin/tags/cids-maven-plugin-1.1</connection>
+        <developerConnection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/cids/cids-maven-plugin/tags/cids-maven-plugin-1.1</developerConnection>
+        <url>http://repositories:8082/central/browse/de/cismet/cids/cids-maven-plugin/tags/cids-maven-plugin-1.1</url>
     </scm>
     <distributionManagement>
         <repository>
