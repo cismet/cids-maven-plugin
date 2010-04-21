@@ -10,7 +10,6 @@ package de.cismet.cids.mavenplugin;
 import java.io.File;
 import java.io.FileFilter;
 
-
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 
@@ -119,7 +118,7 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         sb.deleteCharAt(sb.length() - 1);
 
         // wrap into "" [issue:1457]
-        sb.insert(0, "\"").insert(sb.length(), "\"");
+        sb.insert(0, "\"").insert(sb.length(), "\""); // NOI18N
 
         // double up all '\' [issue:1455]
         final String classpath = sb.toString().replace("\\", "\\\\"); // NOI18N
