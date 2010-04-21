@@ -64,13 +64,13 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         // first add the project's output directory
         sb.append(project.getBuild().getOutputDirectory()).append(File.pathSeparatorChar);
 
-        // collect runtime artifacts and appending them to the classpath string
+        // collect runtime artifacts and append them to the classpath string
         for (final Object o : project.getRuntimeArtifacts()) {
             final Artifact artifact = (Artifact)o;
             sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
         }
 
-        // also collect system artifacts and append them to the classpath string
+        // also collect system artifacts and append them to the classpath string [issue:1456]
         // we will have to iterate over all dependency artifacts because project.getSystemArtifacts() is a trap...
         boolean first = true;
         for (final Object o : project.getDependencyArtifacts()) {
@@ -118,7 +118,10 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         // remove the last colon
         sb.deleteCharAt(sb.length() - 1);
 
-        // double up all '\'
+        // wrap into "" [issue:1457]
+        sb.insert(0, "\"").insert(sb.length(), "\"");
+
+        // double up all '\' [issue:1455]
         final String classpath = sb.toString().replace("\\", "\\\\"); // NOI18N
 
         if (getLog().isInfoEnabled()) {
