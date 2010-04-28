@@ -30,10 +30,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import java.util.Locale;
+import java.util.Set;
 
 import org.apache.maven.model.Build;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.project.MavenProject;
+import org.junit.Ignore;
 
 import org.junit.Test;
 
@@ -63,6 +65,7 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
      * @throws  Exception  DOCUMENT ME!
      */
     @Test
+    @Ignore
     public void testExecute() throws Exception {
         final File pom = new File("/Users/mscholl/svnwork/central/de/cismet/cids/default-i18n/trunk/pom.xml");
 
@@ -279,19 +282,147 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
     /**
      * DOCUMENT ME!
      */
-    public void testScanLocales() {
+    public void testScanLocales() throws Exception {
+
+        final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
+
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
+        assertNotNull("mojo is null", mojo);
+
+        final Method method = mojo.getClass()
+                    .getDeclaredMethod("scanLocales", Array.newInstance(File.class, 0).getClass());
+        method.setAccessible(true);
+
+        File f1 = new File("Bundle_de_DE_EUR.file");
+        File f2 = new File("Bundle_de_DE_WIN.properties");
+        File f3 = new File("fileWithoutExtension");
+        File f4 = new File("Bundle_de_DE_EUR.properties");
+        File f5 = new File("qwerde_DE.properties");
+        File f6 = new File("Bundle_en_US");
+
+        File[] values = new File[]{f1, f2, f3, f4, f5, f6};
+        Set<Locale> result = (Set<Locale>)method.invoke(mojo, (Object)values);
+        assertTrue(result.size() == 4);
+        assertTrue(result.contains(new Locale("en", "US")));
+        assertTrue(result.contains(new Locale("de")));
+        assertTrue(result.contains(new Locale("de", "DE", "EUR")));
+        assertTrue(result.contains(new Locale("de", "DE", "WIN")));
+
+        values = new File[]{f1, f3, f4, f5};
+        result = (Set<Locale>)method.invoke(mojo, (Object)values);
+        assertTrue(result.size() == 2);
+        assertTrue(result.contains(new Locale("de")));
+        assertTrue(result.contains(new Locale("de", "DE", "EUR")));
+
+        values = new File[]{f1, f3, f5, f6};
+        result = (Set<Locale>)method.invoke(mojo, (Object)values);
+        assertTrue(result.size() == 3);
+        assertTrue(result.contains(new Locale("en", "US")));
+        assertTrue(result.contains(new Locale("de")));
+        assertTrue(result.contains(new Locale("de", "DE", "EUR")));
+        
+    }
+
+    /**
+     * @throws Exception
+     */
+    @Test
+    public void testCreateLocale() throws Exception {
+        final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
+
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
+        assertNotNull("mojo is null", mojo);
+
+        final Method method = mojo.getClass()
+                    .getDeclaredMethod("createLocale", Array.newInstance(String.class, 0).getClass());
+        method.setAccessible(true);
+
+        
+        Locale result = null;
+
+        String[] values = new String[]{""};
+        result = (Locale)method.invoke(mojo, (Object)values);
+        assertNull(result);
+
+        values = new String[]{"de"};
+        result = (Locale)method.invoke(mojo, (Object)values);
+        assertEquals("de", result.getLanguage());
+        assertEquals("", result.getCountry());
+        assertEquals("", result.getVariant());
+
+        values = new String[]{"", "de", "DE"};
+        result = (Locale)method.invoke(mojo, (Object)values);
+        assertEquals("_de", result.getLanguage());
+        assertEquals("DE", result.getCountry());
+        assertEquals("", result.getVariant());
+
+        values = new String[]{"DE", "de"};
+        result = (Locale)method.invoke(mojo, (Object)values);
+        assertEquals("de", result.getLanguage());
+        assertEquals("DE", result.getCountry());
+        assertEquals("", result.getVariant());
+
+        values = new String[]{"DE", "de", "Traditional_WIN"};
+        result = (Locale)method.invoke(mojo, (Object)values);
+        assertEquals("de", result.getLanguage());
+        assertEquals("DE", result.getCountry());
+        assertEquals("Traditional_WIN", result.getVariant());
+
+        values = new String[]{"DE", "de", "Traditional", "WIN"};
+        result = (Locale)method.invoke(mojo, (Object)values);
+        assertNull(result);
+        
+
     }
 
     /**
      * DOCUMENT ME!
      */
-    public void testCreateLocale() {
-    }
+    public void testNormaliseSplittedLocale() throws Exception {
+        final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
-    /**
-     * DOCUMENT ME!
-     */
-    public void testNormaliseSplittedLocale() {
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
+        assertNotNull("mojo is null", mojo);
+
+        final Method method = mojo.getClass()
+                    .getDeclaredMethod("normaliseSplittedLocale",
+                    Array.newInstance(String.class, 0).getClass());
+        method.setAccessible(true);
+
+        String[] values = null;
+        String[] result = null;
+
+        values = new String[] {"", "de", "DE"};
+        result = (String[])method.invoke(mojo, (Object)values);
+        assertTrue(result.length == 2);
+        assertEquals("_de", result[0]);
+        assertEquals("DE", result[1]);
+
+        values = new String[] {"", "" ,"de", "DE"};
+        result = (String[])method.invoke(mojo, (Object)values);
+        assertTrue(result.length == 3);
+        assertEquals("_", result[0]);
+        assertEquals("de", result[1]);
+        assertEquals("DE", result[2]);
+
+        values = new String[] {"" ,"", ""};
+        result = (String[])method.invoke(mojo, (Object)values);
+        assertTrue(result.length == 1);
+        assertEquals("_", result[0]);
+        
+        values = new String[] {"" ,"", "", ""};
+        result = (String[])method.invoke(mojo, (Object)values);
+        assertTrue(result.length == 2);
+        assertEquals("_", result[0]);
+        assertEquals("_", result[1]);
+
+        values = new String[] {"de", "", "DE"};
+        result = (String[])method.invoke(mojo, (Object)values);
+        assertTrue(result.length == 2);
+        assertEquals("de", result[0]);
+        assertEquals("_DE", result[1]);
+
+
     }
 
     /**
@@ -333,7 +464,21 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         result = (String)method.invoke(mojo, delim, values);
         assertEquals("ab", result);
 
-        // TODO more tests!
+        delim = ",";
+        values = new String[] { "a", "b", "c" };
+        result = (String)method.invoke(mojo, delim, values);
+        assertEquals("a,b,c", result);
+
+        delim = "+++";
+        values = new String[] {};
+        result = (String)method.invoke(mojo, delim, values);
+        assertEquals("", result);
+
+        delim = "#";
+        values = new String[] {"","",""};
+        result = (String)method.invoke(mojo, delim, values);
+        assertEquals("##", result);
+
     }
 
     /**
