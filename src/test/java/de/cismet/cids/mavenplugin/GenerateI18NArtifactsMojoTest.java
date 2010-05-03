@@ -36,6 +36,7 @@ import java.util.Set;
 
 import org.apache.maven.model.Build;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
+import org.apache.maven.project.DefaultMavenProjectHelper;
 import org.apache.maven.project.MavenProject;
 import org.junit.Ignore;
 
@@ -68,12 +69,22 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
     @Test
     @Ignore
     public void testExecute() throws Exception {
-        final File pom = new File("/Users/mscholl/svnwork/central/de/cismet/cids/default-i18n/trunk/pom.xml");
+        final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", pom);
+        final MavenProject project = new MavenProject();
+        final DefaultMavenProjectHelper helper = new DefaultMavenProjectHelper();
+        final Build build = new Build();
+        build.setFinalName("testArtifact-1.0");
+        build.setDirectory(getBasedir() + "/target/GenerateI18NArtifactsMojoTest");
+        project.setBuild(build);
+
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
 
         assertNotNull("mojo is null", mojo);
-        // mojo.execute();
+        setVariableValueToObject(mojo, "project", project);
+        setVariableValueToObject(mojo, "projectHelper", helper);
+
+        mojo.execute();
     }
 
     /**
@@ -618,7 +629,10 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         // filefilter == null => noFilter used
         recursive = true;
         result = (File[]) method.invoke(mojo, root, filter, recursive);
-        assertEquals(9, result.length);
+//        for (File file : result) {
+//            System.err.println(file.getName());
+//        }
+        assertEquals(32, result.length);
 
         recursive = false;
         result = (File[]) method.invoke(mojo, root, filter, recursive);
