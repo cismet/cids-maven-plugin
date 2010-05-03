@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import org.apache.maven.model.FileSet;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -131,12 +132,30 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
      *
      * @return  the output jar
      *
-     * @throws  ArchiverException      if an error occurs while adding an entry
-     * @throws  IOException            if an error occurs while writing the archive
-     * @throws  IllegalStateException  if no jar archiver could be found
+     * @throws  IllegalArgumentException    if the propertiesFiles argument is null or none of the specified files matches the filefilter criteria
+     * @throws  ArchiverException           if an error occurs while adding an entry
+     * @throws  IOException                 if an error occurs while writing the archive
+     * @throws  IllegalStateException       if no jar archiver could be found
      */
     private File generateLocalisedJar(final Locale locale, final File... propertiesFiles) throws ArchiverException,
-        IOException {
+        IOException, IllegalArgumentException {
+        if(propertiesFiles == null)
+            throw new IllegalArgumentException("Parameter propertyFiles is null");
+        if(propertiesFiles.length == 0)
+            throw new IllegalArgumentException("Parameter propertyFiles contains no elements");
+
+        // filter all localised files and add them to the archiver
+        final RecursiveLocalisedNBPropertiesFilter filter = new RecursiveLocalisedNBPropertiesFilter(locale);
+
+        Set<File> filteredFiles = new HashSet<File>();
+        for (File file : propertiesFiles) {
+            if(filter.accept(file))
+                filteredFiles.add(file);
+        }
+
+        if(filteredFiles.size() == 0)
+            throw new IllegalArgumentException("None of the given files matches the filter criteria");
+
         final File outFile = createOutputFile(locale);
 
         // prepare the archiver
@@ -148,14 +167,12 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
         }
         archiver.setDestFile(outFile);
 
-        // filter all localised files and add them to the archiver
-        final RecursiveLocalisedNBPropertiesFilter filter = new RecursiveLocalisedNBPropertiesFilter(locale);
-        for (final File file : propertiesFiles) {
-            if (filter.accept(file)) {
+        for (final File file : filteredFiles) {
+//            if (filter.accept(file)) {
                 archiver.addFile(
                     file,
                     stripLocale(chRoot(inputDirectory.getAbsolutePath(), file.getAbsolutePath()), locale));
-            }
+//            }
         }
 
         // finally write the archive
@@ -360,11 +377,16 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
      * Creates a locale from a splitted <code>String</code>.
      *
      * @param   splittedLocale  a splitted <code>String</code> array denoting a <code>Locale</code> (e.g. ["de", "DE"])
-     *
+     * @throws  IllegalArgumentException if given argument is null
      * @return  the <code>Locale</code> created from the <code>String</code> array or null if the length of the array is
      *          less than one and more than three (0 < length < 4)
      */
     private Locale createLocale(final String... splittedLocale) {
+
+        if (splittedLocale == null) {
+            throw new IllegalArgumentException("given argument is null"); // NOI18N
+        }
+
         final String[] normalisedSplit = normaliseSplittedLocale(splittedLocale);
         switch (normalisedSplit.length) {
             case 0: {
@@ -404,10 +426,15 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
      * </ul>
      *
      * @param   splittedLocale  the splitted locale to be normalised
-     *
+     * @throws  IllegalArgumentException if given argument is null
      * @return  the normalies splitted locale array
      */
     private String[] normaliseSplittedLocale(final String... splittedLocale) {
+
+        if (splittedLocale == null) {
+            throw new IllegalArgumentException("given argument is null"); // NOI18N
+        }
+
         final ArrayList<String> normalised = new ArrayList<String>(splittedLocale.length);
 
         int i = 0;
@@ -477,7 +504,7 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
      * @throws  IllegalArgumentException  DOCUMENT ME!
      */
     private File[] getAllFiles(final File root, final FileFilter filefilter, final boolean recursive) {
-        if (!root.isDirectory()) {
+        if (root == null || !root.isDirectory()) {
             throw new IllegalArgumentException("cannot get files from normal file: " + root); // NOI18N
         }
 
@@ -505,7 +532,8 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
     //~ Inner Classes ----------------------------------------------------------
 
     /**
-     * This is a FileFilter implementation that accepts any properties files and any directories.
+     * This is a FileFilter implementation that accepts properties files that start with
+     * "Bundle" and any directories.
      *
      * <p>TODO: move to a commons class/project</p>
      *
@@ -523,7 +551,8 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
     }
 
     /**
-     * This is a FileFilter implementation that accepts any properties files with the given locale and any directories.
+     * This is a FileFilter implementation that accepts properties files that start with "Bundle"
+     * and contains the given locale as well as any directories.
      *
      * <p>TODO: move to a commons class/project</p>
      *
