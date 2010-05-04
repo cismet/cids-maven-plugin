@@ -1,30 +1,15 @@
 /***************************************************
- *
- * cismet GmbH, Saarbruecken, Germany
- *
- *              ... and it just works.
- *
- ****************************************************/
-/*
- *  Copyright (C) 2010 mscholl
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+*
+* cismet GmbH, Saarbruecken, Germany
+*
+*              ... and it just works.
+*
+****************************************************/
 package de.cismet.cids.mavenplugin;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.IOException;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -34,11 +19,14 @@ import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Set;
 
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.artifact.handler.DefaultArtifactHandler;
+import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Build;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.project.DefaultMavenProjectHelper;
 import org.apache.maven.project.MavenProject;
-import org.junit.Ignore;
 
 import org.junit.Test;
 
@@ -51,6 +39,7 @@ import org.junit.Test;
 public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
 
     //~ Methods ----------------------------------------------------------------
+
     @Override
     protected void setUp() throws Exception {
         super.setUp();
@@ -67,31 +56,50 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
      * @throws  Exception  DOCUMENT ME!
      */
     @Test
-    @Ignore
     public void testExecute() throws Exception {
         final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
         final MavenProject project = new MavenProject();
+        final Artifact artifact = new DefaultArtifact(
+                "test",
+                "testart",
+                VersionRange.createFromVersion("1.0"),
+                "compile",
+                "jar",
+                null,
+                new DefaultArtifactHandler());
+        project.setArtifact(artifact);
         final DefaultMavenProjectHelper helper = new DefaultMavenProjectHelper();
         final Build build = new Build();
+
         build.setFinalName("testArtifact-1.0");
         build.setDirectory(getBasedir() + "/target/GenerateI18NArtifactsMojoTest");
         project.setBuild(build);
 
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
 
         assertNotNull("mojo is null", mojo);
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "projectHelper", helper);
 
-        mojo.execute();
+        File inputDir = null;
+        try {
+            inputDir = generateStructure();
+            setVariableValueToObject(mojo, "inputDirectory", inputDir);
+
+            mojo.execute();
+        } finally {
+            destroyStructure(inputDir);
+        }
     }
 
     /**
      * DOCUMENT ME!
+     *
+     * @throws  Exception  DOCUMENT ME!
      */
+    @Test
     public void testGenerateLocalisedJar() throws Exception {
-
         final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
         // set up the mojo
@@ -100,56 +108,46 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         build.setFinalName("testArtifact-1.0");
         build.setDirectory(getBasedir() + "/target/GenerateI18NArtifactsMojoTest");
         project.setBuild(build);
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
         assertNotNull("mojo is null", mojo);
         setVariableValueToObject(mojo, "project", project);
 
-        final Method method = mojo.getClass().getDeclaredMethod("generateLocalisedJar", Locale.class, Array.newInstance(File.class, 0).getClass());
+        final Method method = mojo.getClass()
+                    .getDeclaredMethod(
+                        "generateLocalisedJar",
+                        Locale.class,
+                        Array.newInstance(File.class, 0).getClass());
         method.setAccessible(true);
-        final Method getAllFilesMethod = mojo.getClass().getDeclaredMethod("getAllFiles", File.class, FileFilter.class, boolean.class);
+        final Method getAllFilesMethod = mojo.getClass()
+                    .getDeclaredMethod("getAllFiles", File.class, FileFilter.class, boolean.class);
         getAllFilesMethod.setAccessible(true);
 
-        
-
-        File root = new File("src/test/resources/teststructure");
-        File[] files = (File[])getAllFilesMethod.invoke(mojo, root, null, true); // get every file below the testroot
-
-        Locale locale = null;
-        setVariableValueToObject(mojo, "defaultLocale", null);
-        File result = null;
-        
-        
-        // default locale && parameter locale are null resulting in an exception
+        File root = null;
         try {
+            root = generateStructure();
+            File[] files = (File[])getAllFilesMethod.invoke(mojo, root, null, true);
+
+            Locale locale = null;
+            setVariableValueToObject(mojo, "defaultLocale", null);
+            File result = null;
+
             result = (File)method.invoke(mojo, locale, files);
-            fail("expected IllegalArgumentException");
-        } catch (final InvocationTargetException e) {
-            // expected IllegalArgumentExcpetion
-            if (!(e.getCause() instanceof IllegalArgumentException)) {
-                fail("expected IllegalArgumentException");
-            }
-        }
+            assertNull(result);
 
-        locale = new Locale("de", "DE");
-        result = (File)method.invoke(mojo, locale, files);
-        assertEquals("testArtifact-1.0-de_DE.jar", result.getName());
+            locale = new Locale("de", "DE");
+            result = (File)method.invoke(mojo, locale, files);
+            assertEquals("testArtifact-1.0-de_DE.jar", result.getName());
 
+            locale = new Locale("en", "GB");
+            result = (File)method.invoke(mojo, locale, files);
+            assertEquals("testArtifact-1.0-en_GB.jar", result.getName());
 
-        locale = new Locale("en", "GB");
-        result = (File)method.invoke(mojo, locale, files);
-        assertEquals("testArtifact-1.0-en_GB.jar", result.getName());
-
-        try {
             locale = new Locale("es", "ES");
             result = (File)method.invoke(mojo, locale, files);
-            fail("expected IllegalArgumentException");
-        } catch (final InvocationTargetException e) {
-            // expected IllegalArgumentExcpetion
-            if (!(e.getCause() instanceof IllegalArgumentException)) {
-                fail("expected IllegalArgumentException");
-            }
+            assertNull(result);
+        } finally {
+            destroyStructure(root);
         }
-
     }
 
     /**
@@ -161,7 +159,7 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
     public void testChRoot() throws Exception {
         final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
         assertNotNull("mojo is null", mojo);
 
         final Method method = mojo.getClass().getDeclaredMethod("chRoot", String.class, String.class);
@@ -177,28 +175,28 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
             }
         }
 
-        String result = (String) method.invoke(mojo, null, "c:\\a\\b\\c\\d");
+        String result = (String)method.invoke(mojo, null, "c:\\a\\b\\c\\d");
         assertEquals("c:/a/b/c/d", result);
 
-        result = (String) method.invoke(mojo, null, "/a/b/c/d");
+        result = (String)method.invoke(mojo, null, "/a/b/c/d");
         assertEquals("a/b/c/d", result);
 
-        result = (String) method.invoke(mojo, "\\a\\b\\", "c:\\a\\b\\c\\d");
+        result = (String)method.invoke(mojo, "\\a\\b\\", "c:\\a\\b\\c\\d");
         assertEquals("c:/a/b/c/d", result);
 
-        result = (String) method.invoke(mojo, "a/b/", "/a/b/c/d");
+        result = (String)method.invoke(mojo, "a/b/", "/a/b/c/d");
         assertEquals("a/b/c/d", result);
 
-        result = (String) method.invoke(mojo, "c:\\a\\b\\", "c:\\a\\b\\c\\d");
+        result = (String)method.invoke(mojo, "c:\\a\\b\\", "c:\\a\\b\\c\\d");
         assertEquals("c/d", result);
 
-        result = (String) method.invoke(mojo, "/a/b/", "/a/b/c/d");
+        result = (String)method.invoke(mojo, "/a/b/", "/a/b/c/d");
         assertEquals("c/d", result);
 
-        result = (String) method.invoke(mojo, "c:\\a\\b", "c:\\a\\b\\c\\d");
+        result = (String)method.invoke(mojo, "c:\\a\\b", "c:\\a\\b\\c\\d");
         assertEquals("c/d", result);
 
-        result = (String) method.invoke(mojo, "/a/b", "/a/b/c/d");
+        result = (String)method.invoke(mojo, "/a/b", "/a/b/c/d");
         assertEquals("c/d", result);
     }
 
@@ -211,7 +209,7 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
     public void testStripLocale() throws Exception {
         final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
         assertNotNull("mojo is null", mojo);
 
         final Method method = mojo.getClass().getDeclaredMethod("stripLocale", String.class, Locale.class);
@@ -219,72 +217,72 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
 
         String path = null;
         Locale locale = null;
-        String result = (String) method.invoke(mojo, path, locale);
+        String result = (String)method.invoke(mojo, path, locale);
         assertNull(result);
 
         path = null;
         locale = new Locale("de", "DE");
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertNull(result);
 
         path = null;
         locale = new Locale("en", "GB");
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertNull(result);
 
         path = "myFile.file";
         locale = null;
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals(path, result);
 
         path = "a/b/c/d/myFile.path";
         locale = null;
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals(path, result);
 
         path = "/a/b/c/d/myFile.path";
         locale = null;
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals(path, result);
 
         path = "a\\b\\c\\d\\myFile.path";
         locale = null;
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals(path, result);
 
         path = "c:\\a\\b\\c\\d\\myFile.path";
         locale = null;
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals(path, result);
 
         path = "myFile_de_DE_VAR.path";
         locale = null;
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals(path, result);
 
         path = "myFile_de_DE_VAR";
         locale = null;
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals(path, result);
 
         path = "myFile_de_DE_VAR.path";
         locale = new Locale("de", "DE");
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals(path, result);
 
         path = "myFile_de_DE_VAR.path";
         locale = new Locale("de", "DE", "VAR");
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals("myFile.path", result);
 
         path = "myFile_de_DE_VAR";
         locale = new Locale("de", "DE");
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals(path, result);
 
         path = "myFile_de_DE_VAR";
         locale = new Locale("de", "DE", "VAR");
-        result = (String) method.invoke(mojo, path, locale);
+        result = (String)method.invoke(mojo, path, locale);
         assertEquals("myFile", result);
     }
 
@@ -303,7 +301,7 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         build.setFinalName("testArtifact-1.0");
         build.setDirectory(getBasedir() + "/target/GenerateI18NArtifactsMojoTest");
         project.setBuild(build);
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
         assertNotNull("mojo is null", mojo);
         setVariableValueToObject(mojo, "project", project);
 
@@ -322,45 +320,47 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
 
         Locale locale = null;
         setVariableValueToObject(mojo, "defaultLocale", "de_DE");
-        File result = (File) method.invoke(mojo, locale);
+        File result = (File)method.invoke(mojo, locale);
         assertEquals(prefix + "-de_DE.jar", result.getAbsolutePath());
 
         setVariableValueToObject(mojo, "defaultLocale", "_de_DE");
-        result = (File) method.invoke(mojo, locale);
+        result = (File)method.invoke(mojo, locale);
         assertEquals(prefix + "-_de_DE.jar", result.getAbsolutePath());
 
         locale = new Locale("de", "DE");
-        result = (File) method.invoke(mojo, locale);
+        result = (File)method.invoke(mojo, locale);
         assertEquals(prefix + "-de_DE.jar", result.getAbsolutePath());
 
         locale = new Locale("en");
-        result = (File) method.invoke(mojo, locale);
+        result = (File)method.invoke(mojo, locale);
         assertEquals(prefix + "-en.jar", result.getAbsolutePath());
 
         locale = new Locale("EN");
-        result = (File) method.invoke(mojo, locale);
+        result = (File)method.invoke(mojo, locale);
         assertEquals(prefix + "-en.jar", result.getAbsolutePath());
 
         locale = new Locale("EN", "gb");
-        result = (File) method.invoke(mojo, locale);
+        result = (File)method.invoke(mojo, locale);
         assertEquals(prefix + "-en_GB.jar", result.getAbsolutePath());
 
         locale = new Locale("a", "b", "c");
-        result = (File) method.invoke(mojo, locale);
+        result = (File)method.invoke(mojo, locale);
         assertEquals(prefix + "-a_B_c.jar", result.getAbsolutePath());
     }
 
     /**
      * DOCUMENT ME!
+     *
+     * @throws  Exception  DOCUMENT ME!
      */
     public void testScanLocales() throws Exception {
-
         final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
         assertNotNull("mojo is null", mojo);
 
-        final Method method = mojo.getClass().getDeclaredMethod("scanLocales", Array.newInstance(File.class, 0).getClass());
+        final Method method = mojo.getClass()
+                    .getDeclaredMethod("scanLocales", Array.newInstance(File.class, 0).getClass());
         method.setAccessible(true);
 
         File f1 = new File("Bundle_de_DE_EUR.file");
@@ -370,40 +370,42 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         File f5 = new File("qwerde_DE.properties");
         File f6 = new File("Bundle_en_US");
 
-        File[] values = new File[]{f1, f2, f3, f4, f5, f6};
-        Set<Locale> result = (Set<Locale>) method.invoke(mojo, (Object) values);
+        File[] values = new File[] { f1, f2, f3, f4, f5, f6 };
+        Set<Locale> result = (Set<Locale>)method.invoke(mojo, (Object)values);
         assertTrue(result.size() == 4);
         assertTrue(result.contains(new Locale("en", "US")));
         assertTrue(result.contains(new Locale("de")));
         assertTrue(result.contains(new Locale("de", "DE", "EUR")));
         assertTrue(result.contains(new Locale("de", "DE", "WIN")));
 
-        values = new File[]{f1, f3, f4, f5};
-        result = (Set<Locale>) method.invoke(mojo, (Object) values);
+        values = new File[] { f1, f3, f4, f5 };
+        result = (Set<Locale>)method.invoke(mojo, (Object)values);
         assertTrue(result.size() == 2);
         assertTrue(result.contains(new Locale("de")));
         assertTrue(result.contains(new Locale("de", "DE", "EUR")));
 
-        values = new File[]{f1, f3, f5, f6};
-        result = (Set<Locale>) method.invoke(mojo, (Object) values);
+        values = new File[] { f1, f3, f5, f6 };
+        result = (Set<Locale>)method.invoke(mojo, (Object)values);
         assertTrue(result.size() == 3);
         assertTrue(result.contains(new Locale("en", "US")));
         assertTrue(result.contains(new Locale("de")));
         assertTrue(result.contains(new Locale("de", "DE", "EUR")));
-
     }
 
     /**
-     * @throws Exception
+     * DOCUMENT ME!
+     *
+     * @throws  Exception  DOCUMENT ME!
      */
     @Test
     public void testCreateLocale() throws Exception {
         final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
         assertNotNull("mojo is null", mojo);
 
-        final Method method = mojo.getClass().getDeclaredMethod("createLocale", Array.newInstance(String.class, 0).getClass());
+        final Method method = mojo.getClass()
+                    .getDeclaredMethod("createLocale", Array.newInstance(String.class, 0).getClass());
         method.setAccessible(true);
 
         String[] values = null;
@@ -415,58 +417,60 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
             // expected IllegalArgumentExcpetion
             if (!(e.getCause() instanceof IllegalArgumentException)) {
                 e.printStackTrace();
-                fail("expected IllegalArgumentException" );
+                fail("expected IllegalArgumentException");
             }
         }
 
         Locale result = null;
 
-        values = new String[]{""};
-        result = (Locale) method.invoke(mojo, (Object) values);
+        values = new String[] { "" };
+        result = (Locale)method.invoke(mojo, (Object)values);
         assertNull(result);
 
-        values = new String[]{"de"};
-        result = (Locale) method.invoke(mojo, (Object) values);
+        values = new String[] { "de" };
+        result = (Locale)method.invoke(mojo, (Object)values);
         assertEquals("de", result.getLanguage());
         assertEquals("", result.getCountry());
         assertEquals("", result.getVariant());
 
-        values = new String[]{"", "de", "DE"};
-        result = (Locale) method.invoke(mojo, (Object) values);
+        values = new String[] { "", "de", "DE" };
+        result = (Locale)method.invoke(mojo, (Object)values);
         assertEquals("_de", result.getLanguage());
         assertEquals("DE", result.getCountry());
         assertEquals("", result.getVariant());
 
-        values = new String[]{"DE", "de"};
-        result = (Locale) method.invoke(mojo, (Object) values);
+        values = new String[] { "DE", "de" };
+        result = (Locale)method.invoke(mojo, (Object)values);
         assertEquals("de", result.getLanguage());
         assertEquals("DE", result.getCountry());
         assertEquals("", result.getVariant());
 
-        values = new String[]{"DE", "de", "Traditional_WIN"};
-        result = (Locale) method.invoke(mojo, (Object) values);
+        values = new String[] { "DE", "de", "Traditional_WIN" };
+        result = (Locale)method.invoke(mojo, (Object)values);
         assertEquals("de", result.getLanguage());
         assertEquals("DE", result.getCountry());
         assertEquals("Traditional_WIN", result.getVariant());
 
-        values = new String[]{"DE", "de", "Traditional", "WIN"};
-        result = (Locale) method.invoke(mojo, (Object) values);
+        values = new String[] { "DE", "de", "Traditional", "WIN" };
+        result = (Locale)method.invoke(mojo, (Object)values);
         assertNull(result);
-
-
     }
 
     /**
      * DOCUMENT ME!
+     *
+     * @throws  Exception  DOCUMENT ME!
      */
+    @Test
     public void testNormaliseSplittedLocale() throws Exception {
         final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
         assertNotNull("mojo is null", mojo);
 
-        final Method method = mojo.getClass().getDeclaredMethod("normaliseSplittedLocale",
-                Array.newInstance(String.class, 0).getClass());
+        final Method method = mojo.getClass()
+                    .getDeclaredMethod("normaliseSplittedLocale",
+                        Array.newInstance(String.class, 0).getClass());
         method.setAccessible(true);
 
         String[] values = null;
@@ -483,37 +487,35 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
             }
         }
 
-        values = new String[]{"", "de", "DE"};
-        result = (String[]) method.invoke(mojo, (Object) values);
+        values = new String[] { "", "de", "DE" };
+        result = (String[])method.invoke(mojo, (Object)values);
         assertTrue(result.length == 2);
         assertEquals("_de", result[0]);
         assertEquals("DE", result[1]);
 
-        values = new String[]{"", "", "de", "DE"};
-        result = (String[]) method.invoke(mojo, (Object) values);
+        values = new String[] { "", "", "de", "DE" };
+        result = (String[])method.invoke(mojo, (Object)values);
         assertTrue(result.length == 3);
         assertEquals("_", result[0]);
         assertEquals("de", result[1]);
         assertEquals("DE", result[2]);
 
-        values = new String[]{"", "", ""};
-        result = (String[]) method.invoke(mojo, (Object) values);
+        values = new String[] { "", "", "" };
+        result = (String[])method.invoke(mojo, (Object)values);
         assertTrue(result.length == 1);
         assertEquals("_", result[0]);
 
-        values = new String[]{"", "", "", ""};
-        result = (String[]) method.invoke(mojo, (Object) values);
+        values = new String[] { "", "", "", "" };
+        result = (String[])method.invoke(mojo, (Object)values);
         assertTrue(result.length == 2);
         assertEquals("_", result[0]);
         assertEquals("_", result[1]);
 
-        values = new String[]{"de", "", "DE"};
-        result = (String[]) method.invoke(mojo, (Object) values);
+        values = new String[] { "de", "", "DE" };
+        result = (String[])method.invoke(mojo, (Object)values);
         assertTrue(result.length == 2);
         assertEquals("de", result[0]);
         assertEquals("_DE", result[1]);
-
-
     }
 
     /**
@@ -525,10 +527,11 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
     public void testConcat() throws Exception {
         final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
         assertNotNull("mojo is null", mojo);
 
-        final Method method = mojo.getClass().getDeclaredMethod("concat", String.class, Array.newInstance(String.class, 0).getClass());
+        final Method method = mojo.getClass()
+                    .getDeclaredMethod("concat", String.class, Array.newInstance(String.class, 0).getClass());
         method.setAccessible(true);
 
         String delim = null;
@@ -544,38 +547,39 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         }
 
         delim = null;
-        values = new String[]{};
-        String result = (String) method.invoke(mojo, delim, values);
+        values = new String[] {};
+        String result = (String)method.invoke(mojo, delim, values);
         assertNotNull(result);
         assertTrue(result.isEmpty());
 
         delim = null;
-        values = new String[]{"a", "b"};
-        result = (String) method.invoke(mojo, delim, values);
+        values = new String[] { "a", "b" };
+        result = (String)method.invoke(mojo, delim, values);
         assertEquals("ab", result);
 
         delim = ",";
-        values = new String[]{"a", "b", "c"};
-        result = (String) method.invoke(mojo, delim, values);
+        values = new String[] { "a", "b", "c" };
+        result = (String)method.invoke(mojo, delim, values);
         assertEquals("a,b,c", result);
 
         delim = "+++";
-        values = new String[]{};
-        result = (String) method.invoke(mojo, delim, values);
+        values = new String[] {};
+        result = (String)method.invoke(mojo, delim, values);
         assertEquals("", result);
 
         delim = "#";
-        values = new String[]{"", "", ""};
-        result = (String) method.invoke(mojo, delim, values);
+        values = new String[] { "", "", "" };
+        result = (String)method.invoke(mojo, delim, values);
         assertEquals("##", result);
-
     }
 
     /**
      * DOCUMENT ME!
+     *
+     * @throws  Exception  DOCUMENT ME!
      */
+    @Test
     public void testGetAllFiles() throws Exception {
-
         final File testpom = new File(getBasedir(), "src/test/resources/de/cismet/cids/mavenplugin/testpom.xml");
 
         // set up the mojo
@@ -584,27 +588,33 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         build.setFinalName("testArtifact-1.0");
         build.setDirectory(getBasedir() + "/target/GenerateI18NArtifactsMojoTest");
         project.setBuild(build);
-        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts) lookupMojo("generate-i18n", testpom);
+        final GenerateI18NArtifacts mojo = (GenerateI18NArtifacts)lookupMojo("generate-i18n", testpom);
         assertNotNull("mojo is null", mojo);
         setVariableValueToObject(mojo, "project", project);
 
-        final Method method = mojo.getClass().getDeclaredMethod("getAllFiles", File.class, FileFilter.class, boolean.class);
+        final Method method = mojo.getClass()
+                    .getDeclaredMethod("getAllFiles", File.class, FileFilter.class, boolean.class);
         method.setAccessible(true);
 
         final Class[] mojoClasses = mojo.getClass().getDeclaredClasses();
         Class RecursiveNBPropertiesFilter = null;
         Class RecursiveLocalisedNBPropertiesFilter = null;
         for (Class c : mojoClasses) {
-            if(c.getName().equals("de.cismet.cids.mavenplugin.GenerateI18NArtifacts$RecursiveNBPropertiesFilter"))
+            if (c.getName().equals("de.cismet.cids.mavenplugin.GenerateI18NArtifacts$RecursiveNBPropertiesFilter")) {
                 RecursiveNBPropertiesFilter = c;
+            }
 
-            if(c.getName().equals("de.cismet.cids.mavenplugin.GenerateI18NArtifacts$RecursiveLocalisedNBPropertiesFilter"))
+            if (
+                c.getName().equals(
+                            "de.cismet.cids.mavenplugin.GenerateI18NArtifacts$RecursiveLocalisedNBPropertiesFilter")) {
                 RecursiveLocalisedNBPropertiesFilter = c;
+            }
         }
 
-        Constructor cRecursiveNBPropertiesFilter = RecursiveNBPropertiesFilter.getDeclaredConstructor(new Class[]{});
-        Constructor cRecursiveLocalisedNBPropertiesFilter = 
-                RecursiveLocalisedNBPropertiesFilter.getDeclaredConstructor(new Class[]{Locale.class});
+        final Constructor cRecursiveNBPropertiesFilter = RecursiveNBPropertiesFilter.getDeclaredConstructor(
+                new Class[] {});
+        final Constructor cRecursiveLocalisedNBPropertiesFilter = RecursiveLocalisedNBPropertiesFilter
+                    .getDeclaredConstructor(new Class[] { Locale.class });
 
         cRecursiveNBPropertiesFilter.setAccessible(true);
         cRecursiveLocalisedNBPropertiesFilter.setAccessible(true);
@@ -625,28 +635,125 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
             }
         }
 
-        root = new File("src/test/resources/teststructure");
-        // filefilter == null => noFilter used
-        recursive = true;
-        result = (File[]) method.invoke(mojo, root, filter, recursive);
-//        for (File file : result) {
-//            System.err.println(file.getName());
-//        }
-        assertEquals(32, result.length);
+        try {
+            root = generateStructure();
 
-        recursive = false;
-        result = (File[]) method.invoke(mojo, root, filter, recursive);
-        assertEquals(0, result.length);
+            // filefilter == null => noFilter used
+            recursive = true;
+            result = (File[])method.invoke(mojo, root, filter, recursive);
+            assertEquals(9, result.length);
 
-        recursive = true;
-        filter = (FileFilter) cRecursiveLocalisedNBPropertiesFilter.newInstance(new Locale("de", "DE"));
-        result = (File[]) method.invoke(mojo, root, filter, recursive);
-        assertEquals(2, result.length);
+            recursive = false;
+            result = (File[])method.invoke(mojo, root, filter, recursive);
+            assertEquals(0, result.length);
 
-        recursive = true;
-        filter = (FileFilter) cRecursiveNBPropertiesFilter.newInstance();
-        result = (File[]) method.invoke(mojo, root, filter, recursive);
-        assertEquals(6, result.length);
+            recursive = true;
+            filter = (FileFilter)cRecursiveLocalisedNBPropertiesFilter.newInstance(new Locale("de", "DE"));
+            result = (File[])method.invoke(mojo, root, filter, recursive);
+            assertEquals(2, result.length);
 
+            recursive = true;
+            filter = (FileFilter)cRecursiveNBPropertiesFilter.newInstance();
+            result = (File[])method.invoke(mojo, root, filter, recursive);
+            assertEquals(6, result.length);
+        } finally {
+            destroyStructure(root);
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  IOException  DOCUMENT ME!
+     */
+    private File generateStructure() throws IOException {
+        final File root = new File(getBasedir(), "target/teststructure");
+        if (!root.mkdir()) {
+            fail("could not create test file structure");
+        }
+
+        final File sub1 = new File(root, "sub1");
+        if (!sub1.mkdir()) {
+            fail("could not create test file structure");
+        }
+        if (!new File(sub1, "Bundle1.properties").createNewFile()) {
+            fail("could not create test file structure");
+        }
+        if (!new File(sub1, "Bundle1_de_DE.properties").createNewFile()) {
+            fail("could not create test file structure");
+        }
+
+        final File sub2 = new File(root, "sub2");
+        if (!sub2.mkdir()) {
+            fail("could not create test file structure");
+        }
+        if (!new File(sub2, "file3.txt").createNewFile()) {
+            fail("could not create test file structure");
+        }
+        File file = new File(sub2, "sub2sub1");
+        if (!file.mkdir()) {
+            fail("could not create test file structure");
+        }
+        if (!new File(file, "file1").createNewFile()) {
+            fail("could not create test file structure");
+        }
+        if (!new File(file, "file2").createNewFile()) {
+            fail("could not create test file structure");
+        }
+        file = new File(sub2, "sub2sub2");
+        if (!file.mkdir()) {
+            fail("could not create test file structure");
+        }
+        if (!new File(file, "Bundle2.properties").createNewFile()) {
+            fail("could not create test file structure");
+        }
+        if (!new File(file, "Bundle2_de_DE.properties").createNewFile()) {
+            fail("could not create test file structure");
+        }
+        if (!new File(file, "Bundle2_en_GB.properties").createNewFile()) {
+            fail("could not create test file structure");
+        }
+
+        final File sub3 = new File(root, "sub3");
+        if (!sub3.mkdir()) {
+            fail("could not create test file structure");
+        }
+        file = new File(sub3, "sub3sub1");
+        if (!file.mkdir()) {
+            fail("could not create test file structure");
+        }
+        if (!new File(file, "Bundle3.properties").createNewFile()) {
+            fail("could not create test file structure");
+        }
+
+        return root;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  root  DOCUMENT ME!
+     */
+    private void destroyStructure(final File root) {
+        if (root == null) {
+            return;
+        }
+        if (root.isDirectory()) {
+            for (final File file : root.listFiles()) {
+                if (file.isDirectory()) {
+                    destroyStructure(file);
+                } else {
+                    if (!file.delete()) {
+                        fail("cold not destroy test file structure");
+                    }
+                }
+            }
+        }
+
+        if (!root.delete()) {
+            fail("cold not destroy test file structure");
+        }
     }
 }
