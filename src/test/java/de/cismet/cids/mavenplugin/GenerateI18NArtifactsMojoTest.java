@@ -7,6 +7,17 @@
 ****************************************************/
 package de.cismet.cids.mavenplugin;
 
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.artifact.handler.DefaultArtifactHandler;
+import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.model.Build;
+import org.apache.maven.plugin.testing.AbstractMojoTestCase;
+import org.apache.maven.project.DefaultMavenProjectHelper;
+import org.apache.maven.project.MavenProject;
+
+import org.junit.Test;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -18,17 +29,6 @@ import java.lang.reflect.Method;
 
 import java.util.Locale;
 import java.util.Set;
-
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.DefaultArtifact;
-import org.apache.maven.artifact.handler.DefaultArtifactHandler;
-import org.apache.maven.artifact.versioning.VersionRange;
-import org.apache.maven.model.Build;
-import org.apache.maven.plugin.testing.AbstractMojoTestCase;
-import org.apache.maven.project.DefaultMavenProjectHelper;
-import org.apache.maven.project.MavenProject;
-
-import org.junit.Test;
 
 /**
  * DOCUMENT ME!
@@ -125,7 +125,7 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         File root = null;
         try {
             root = generateStructure();
-            File[] files = (File[])getAllFilesMethod.invoke(mojo, root, null, true);
+            final File[] files = (File[])getAllFilesMethod.invoke(mojo, root, null, true);
 
             Locale locale = null;
             setVariableValueToObject(mojo, "defaultLocale", null);
@@ -363,12 +363,12 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
                     .getDeclaredMethod("scanLocales", Array.newInstance(File.class, 0).getClass());
         method.setAccessible(true);
 
-        File f1 = new File("Bundle_de_DE_EUR.file");
-        File f2 = new File("Bundle_de_DE_WIN.properties");
-        File f3 = new File("fileWithoutExtension");
-        File f4 = new File("Bundle_de_DE_EUR.properties");
-        File f5 = new File("qwerde_DE.properties");
-        File f6 = new File("Bundle_en_US");
+        final File f1 = new File("Bundle_de_DE_EUR.file");
+        final File f2 = new File("Bundle_de_DE_WIN.properties");
+        final File f3 = new File("fileWithoutExtension");
+        final File f4 = new File("Bundle_de_DE_EUR.properties");
+        final File f5 = new File("qwerde_DE.properties");
+        final File f6 = new File("Bundle_en_US");
 
         File[] values = new File[] { f1, f2, f3, f4, f5, f6 };
         Set<Locale> result = (Set<Locale>)method.invoke(mojo, (Object)values);
@@ -599,13 +599,12 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         final Class[] mojoClasses = mojo.getClass().getDeclaredClasses();
         Class RecursiveNBPropertiesFilter = null;
         Class RecursiveLocalisedNBPropertiesFilter = null;
-        for (Class c : mojoClasses) {
+        for (final Class c : mojoClasses) {
             if (c.getName().equals("de.cismet.cids.mavenplugin.GenerateI18NArtifacts$RecursiveNBPropertiesFilter")) {
                 RecursiveNBPropertiesFilter = c;
             }
 
-            if (
-                c.getName().equals(
+            if (c.getName().equals(
                             "de.cismet.cids.mavenplugin.GenerateI18NArtifacts$RecursiveLocalisedNBPropertiesFilter")) {
                 RecursiveLocalisedNBPropertiesFilter = c;
             }

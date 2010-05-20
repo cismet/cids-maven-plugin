@@ -7,16 +7,6 @@
 ****************************************************/
 package de.cismet.cids.mavenplugin;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Set;
-
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
@@ -26,6 +16,16 @@ import org.codehaus.plexus.archiver.Archiver;
 import org.codehaus.plexus.archiver.ArchiverException;
 import org.codehaus.plexus.archiver.manager.ArchiverManager;
 import org.codehaus.plexus.archiver.manager.NoSuchArchiverException;
+
+import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * This goal generates default i18n jars from a specified folder.
@@ -141,8 +141,7 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
      * @throws  IllegalArgumentException  if the propertiesFiles argument is null
      */
     private File generateLocalisedJar(final Locale locale, final File... propertiesFiles) throws ArchiverException,
-        IOException,
-        IllegalArgumentException {
+        IOException, IllegalArgumentException {
         if (propertiesFiles == null) {
             throw new IllegalArgumentException("Parameter propertyFiles is null");
         }
@@ -551,6 +550,13 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
 
         //~ Methods ------------------------------------------------------------
 
+        /**
+         * DOCUMENT ME!
+         *
+         * @param   pathname  DOCUMENT ME!
+         *
+         * @return  DOCUMENT ME!
+         */
         @Override
         public boolean accept(final File pathname) {
             return pathname.isDirectory()
@@ -586,6 +592,13 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
 
         //~ Methods ------------------------------------------------------------
 
+        /**
+         * DOCUMENT ME!
+         *
+         * @param   pathname  DOCUMENT ME!
+         *
+         * @return  DOCUMENT ME!
+         */
         @Override
         public boolean accept(final File pathname) {
             final String name = pathname.getName();
@@ -611,6 +624,13 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
 
         //~ Methods ------------------------------------------------------------
 
+        /**
+         * DOCUMENT ME!
+         *
+         * @param   pathname  DOCUMENT ME!
+         *
+         * @return  DOCUMENT ME!
+         */
         @Override
         public boolean accept(final File pathname) {
             return true;

@@ -7,9 +7,6 @@
 ****************************************************/
 package de.cismet.cids.mavenplugin;
 
-import java.util.List;
-import java.util.Set;
-
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
@@ -25,6 +22,9 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * General Mojo for cids related maven plugin stuff.
@@ -55,8 +55,8 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * Location of the local repository.
      *
      * @parameter  expression="${localRepository}"
-     * @readonly   true
      * @required   true
+     * @readonly   true
      */
     protected transient ArtifactRepository local;
 
@@ -64,8 +64,8 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * List of Remote Repositories used by the resolver.
      *
      * @parameter  expression="${project.remoteArtifactRepositories}"
-     * @readonly   true
      * @required   true
+     * @readonly   true
      */
     protected transient List remoteRepos;
 
@@ -103,6 +103,24 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      */
     protected transient ArtifactFactory factory;
 
+    /**
+     * Whether to skip the execution of this mojo.
+     *
+     * @parameter  expression="${refsystem.reset.skip}" default-value="false"
+     * @required   false
+     * @readonly   true
+     */
+    protected transient Boolean skip;
+
+    /**
+     * Whether to skip the execution of this mojo.
+     *
+     * @parameter  expression="${refsystem.reset.skip}" default-value="true"
+     * @required   false
+     * @readonly   true
+     */
+    protected transient Boolean failOnError;
+
     //~ Methods ----------------------------------------------------------------
 
     /**
@@ -119,22 +137,22 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @throws  ArtifactNotFoundException          if an artifact of the fiven artifact cannot be found
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope)
-        throws ProjectBuildingException,
-            InvalidDependencyVersionException,
-            ArtifactResolutionException,
-            ArtifactNotFoundException {
+            throws ProjectBuildingException,
+                InvalidDependencyVersionException,
+                ArtifactResolutionException,
+                ArtifactNotFoundException {
         final Log log = getLog();
 
         // create a maven project from the pom
         final MavenProject pomProject = resolveProject(artifact);
         if (log.isDebugEnabled()) {
-            log.debug("created mavenproject from pom '" + artifact + "': " + pomProject);
+            log.debug("created mavenproject from pom '" + artifact + "': " + pomProject); // NOI18N
         }
 
         // resolve all runtime artifacts from the created project
         final Set runtimeArtifacts = pomProject.createArtifacts(factory, scope, new ScopeArtifactFilter(scope));
         if (log.isDebugEnabled()) {
-            log.debug("runtime artifacts of project '" + pomProject + "': " + runtimeArtifacts);
+            log.debug("runtime artifacts of project '" + pomProject + "': " + runtimeArtifacts); // NOI18N
         }
 
         final ArtifactResolutionResult result = resolver.resolveTransitively(
@@ -162,10 +180,10 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
                 artifact.getGroupId(),
                 artifact.getArtifactId(),
                 artifact.getVersion(),
-                "",
-                "pom");
+                "", // NOI18N
+                "pom"); // NOI18N
         if (getLog().isDebugEnabled()) {
-            getLog().debug("created pom artifact from artifact '" + artifact + "': " + pom);
+            getLog().debug("created pom artifact from artifact '" + artifact + "': " + pom); // NOI18N
         }
 
         return mavenProjectBuilder.buildFromRepository(pom, remoteRepos, local);

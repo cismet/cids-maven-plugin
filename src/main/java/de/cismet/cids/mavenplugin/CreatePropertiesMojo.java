@@ -7,11 +7,11 @@
 ****************************************************/
 package de.cismet.cids.mavenplugin;
 
-import java.io.File;
-import java.io.FileFilter;
-
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
+
+import java.io.File;
+import java.io.FileFilter;
 
 /**
  * Goal which creates properties related to a cids project.

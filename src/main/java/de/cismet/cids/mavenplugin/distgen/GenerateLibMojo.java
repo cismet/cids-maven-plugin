@@ -7,14 +7,12 @@
 ****************************************************/
 package de.cismet.cids.mavenplugin.distgen;
 
-import de.cismet.cids.jnlp.Homepage;
-import de.cismet.cids.jnlp.Information;
-import de.cismet.cids.jnlp.Jar;
-import de.cismet.cids.jnlp.Jnlp;
-import de.cismet.cids.jnlp.ObjectFactory;
-import de.cismet.cids.jnlp.Resources;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectBuildingException;
 
-import de.cismet.cids.mavenplugin.AbstractCidsMojo;
+import org.codehaus.plexus.util.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,12 +25,14 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectBuildingException;
+import de.cismet.cids.jnlp.Homepage;
+import de.cismet.cids.jnlp.Information;
+import de.cismet.cids.jnlp.Jar;
+import de.cismet.cids.jnlp.Jnlp;
+import de.cismet.cids.jnlp.ObjectFactory;
+import de.cismet.cids.jnlp.Resources;
 
-import org.codehaus.plexus.util.FileUtils;
+import de.cismet.cids.mavenplugin.AbstractCidsMojo;
 
 /**
  * Goal which generates a the lib folder of a cids distribution.
@@ -95,8 +95,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final Set<Artifact> dependencies = project.getDependencyArtifacts();
         for (final Artifact artifact : dependencies) {
             // only accept artifacts neccessary for runtime
-            if (
-                Artifact.SCOPE_COMPILE.equals(artifact.getScope())
+            if (Artifact.SCOPE_COMPILE.equals(artifact.getScope())
                         || Artifact.SCOPE_RUNTIME.equals(artifact.getScope())) {
                 populateLibDir(artifact);
             }
@@ -261,7 +260,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         marshaller.marshal(jnlp, outFile);
 
         if (getLog().isInfoEnabled()) {
-            getLog().info("created jnlp: " + outFile);
+            getLog().info("created jnlp: " + outFile); // NOI18N
         }
 
         return outFile;
