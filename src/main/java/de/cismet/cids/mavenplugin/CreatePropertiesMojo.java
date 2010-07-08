@@ -26,6 +26,14 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
     //~ Instance fields --------------------------------------------------------
 
     /**
+     * Whether to skip the execution of this mojo.
+     *
+     * @parameter  expression="${de.cismet.cids.create-properties.skip}" default-value="false"
+     * @required   false
+     */
+    private transient Boolean skip;
+
+    /**
      * The <code>de.cismet.cids.lib.local</code> property.
      *
      * @parameter  expression="${de.cismet.cids.lib.local}"
@@ -43,6 +51,12 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
      */
     @Override
     public void execute() throws MojoExecutionException {
+        if (skip) {
+            if (getLog().isInfoEnabled()) {
+                getLog().info("reset reference system skipped"); // NOI18N
+            }
+            return;
+        }
         createClasspathProperty();
     }
 

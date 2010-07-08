@@ -45,9 +45,17 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
     //~ Instance fields --------------------------------------------------------
 
     /**
+     * Whether to skip the execution of this mojo.
+     *
+     * @parameter  expression="${cids.generate-i18n.skip}" default-value="false"
+     * @required   false
+     */
+    private transient Boolean skip;
+
+    /**
      * The <code>default.i18n.locale</code> property.
      *
-     * @parameter  expression="${default.i18n.locale}"
+     * @parameter  expression="${cids.default.i18n.locale}"
      * @required   false
      * @readonly   true
      */
@@ -56,7 +64,7 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
     /**
      * The <code>default.i18n.inputDirectory</code> property.
      *
-     * @parameter  expression="${default.i18n.inputDirectory}"
+     * @parameter  expression="${cids.default.i18n.inputDirectory}"
      * @required   true
      */
     private transient File inputDirectory;
@@ -85,6 +93,13 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
      */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        if (skip) {
+            if (getLog().isInfoEnabled()) {
+                getLog().info("reset reference system skipped"); // NOI18N}
+            }
+            return;
+        }
+
         final Log log = getLog();
 
         // first resolve all available resource files
@@ -141,7 +156,8 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
      * @throws  IllegalArgumentException  if the propertiesFiles argument is null
      */
     private File generateLocalisedJar(final Locale locale, final File... propertiesFiles) throws ArchiverException,
-        IOException, IllegalArgumentException {
+        IOException,
+        IllegalArgumentException {
         if (propertiesFiles == null) {
             throw new IllegalArgumentException("Parameter propertyFiles is null");
         }

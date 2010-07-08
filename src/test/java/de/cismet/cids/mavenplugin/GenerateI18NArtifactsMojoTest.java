@@ -81,7 +81,8 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
         assertNotNull("mojo is null", mojo);
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "projectHelper", helper);
-
+        setVariableValueToObject(mojo, "skip", false);
+        
         File inputDir = null;
         try {
             inputDir = generateStructure();
@@ -316,8 +317,9 @@ public class GenerateI18NArtifactsMojoTest extends AbstractMojoTestCase {
             // expected IllegalArgumentExcpetion
         }
 
-        final String prefix = build.getDirectory() + File.separator + build.getFinalName();
-
+        final File buildDir = new File(build.getDirectory());
+        final String prefix = buildDir.getAbsolutePath() + File.separator + build.getFinalName();
+        
         Locale locale = null;
         setVariableValueToObject(mojo, "defaultLocale", "de_DE");
         File result = (File)method.invoke(mojo, locale);

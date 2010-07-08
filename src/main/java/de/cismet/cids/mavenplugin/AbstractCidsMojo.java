@@ -106,15 +106,6 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     /**
      * Whether to skip the execution of this mojo.
      *
-     * @parameter  expression="${refsystem.reset.skip}" default-value="false"
-     * @required   false
-     * @readonly   true
-     */
-    protected transient Boolean skip;
-
-    /**
-     * Whether to skip the execution of this mojo.
-     *
      * @parameter  expression="${refsystem.reset.skip}" default-value="true"
      * @required   false
      * @readonly   true

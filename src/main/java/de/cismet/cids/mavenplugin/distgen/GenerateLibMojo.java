@@ -51,9 +51,17 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     //~ Instance fields --------------------------------------------------------
 
     /**
+     * Whether to skip the execution of this mojo.
+     *
+     * @parameter  expression="${cids.generate-lib.skip}" default-value="false"
+     * @required   false
+     */
+    private transient Boolean skip;
+
+    /**
      * The directory where the lib directory shall be created in.
      *
-     * @parameter  expression="${generate-lib.outputDirectory}
+     * @parameter  expression="${cids.generate-lib.outputDirectory}
      * @required   true
      */
     private transient File outputDirectory;
@@ -61,14 +69,14 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * The vendor generating the lib structure.
      *
-     * @parameter  expression="${generate-lib.vendor}
+     * @parameter  expression="${cids.generate-lib.vendor}
      */
     private transient String vendor;
 
     /**
      * The homepage of the vendor generating the lib structure.
      *
-     * @parameter  expression="${generate-lib.homepage}
+     * @parameter  expression="${cids.generate-lib.homepage}
      */
     private transient String homepage;
 
@@ -81,10 +89,16 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      */
     @Override
     public void execute() throws MojoExecutionException {
+        if (skip) {
+            if (getLog().isInfoEnabled()) {
+                getLog().info("reset reference system skipped"); // NOI18N
+            }
+            return;
+        }
         try {
             generateStructure();
         } catch (final Exception e) {
-            final String message = "cannot generate structure"; // NOI18N
+            final String message = "cannot generate structure";  // NOI18N
             if (getLog().isErrorEnabled()) {
                 getLog().error(message);
             }

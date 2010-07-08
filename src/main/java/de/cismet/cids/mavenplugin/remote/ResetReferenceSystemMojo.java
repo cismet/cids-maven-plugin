@@ -31,6 +31,16 @@ public class ResetReferenceSystemMojo extends AbstractCidsMojo {
 
     public static final String REF_SYSTEM_RESET_URL = "http://kif:9986/RemoteTestHelper/resetReferenceSystem"; // NOI18N
 
+    //~ Instance fields --------------------------------------------------------
+
+    /**
+     * Whether to skip the execution of this mojo.
+     *
+     * @parameter  expression="${cids.generate-lib.skip}" default-value="false"
+     * @required   false
+     */
+    private transient Boolean skip;
+
     //~ Methods ----------------------------------------------------------------
 
     /**
