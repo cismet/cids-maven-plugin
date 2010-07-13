@@ -91,10 +91,12 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     public void execute() throws MojoExecutionException {
         if (skip) {
             if (getLog().isInfoEnabled()) {
-                getLog().info("reset reference system skipped"); // NOI18N
+                getLog().info("generate lib skipped"); // NOI18N
             }
+            
             return;
         }
+
         try {
             generateStructure();
         } catch (final Exception e) {

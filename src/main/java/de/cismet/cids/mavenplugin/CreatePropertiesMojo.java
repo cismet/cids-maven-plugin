@@ -53,10 +53,12 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
     public void execute() throws MojoExecutionException {
         if (skip) {
             if (getLog().isInfoEnabled()) {
-                getLog().info("reset reference system skipped"); // NOI18N
+                getLog().info("create properties skipped"); // NOI18N
             }
+
             return;
         }
+
         createClasspathProperty();
     }
 

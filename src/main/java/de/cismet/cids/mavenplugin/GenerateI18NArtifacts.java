@@ -95,8 +95,9 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skip) {
             if (getLog().isInfoEnabled()) {
-                getLog().info("reset reference system skipped"); // NOI18N}
+                getLog().info("generate i18n artifacts skipped"); // NOI18N}
             }
+
             return;
         }
 

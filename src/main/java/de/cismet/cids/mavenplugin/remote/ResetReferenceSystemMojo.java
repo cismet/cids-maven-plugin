@@ -55,6 +55,7 @@ public class ResetReferenceSystemMojo extends AbstractCidsMojo {
             if (getLog().isInfoEnabled()) {
                 getLog().info("reset reference system skipped"); // NOI18N
             }
+            
             return;
         }
 
