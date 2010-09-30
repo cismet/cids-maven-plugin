@@ -15,11 +15,15 @@ import org.apache.maven.project.ProjectBuildingException;
 import org.codehaus.plexus.util.FileUtils;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -57,7 +61,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @required   false
      */
     private transient Boolean skip;
-
     /**
      * The directory where the lib directory shall be created in.
      *
@@ -65,14 +68,12 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @required   true
      */
     private transient File outputDirectory;
-
     /**
      * The vendor generating the lib structure.
      *
      * @parameter  expression="${cids.generate-lib.vendor}
      */
     private transient String vendor;
-
     /**
      * The homepage of the vendor generating the lib structure.
      *
@@ -93,14 +94,14 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             if (getLog().isInfoEnabled()) {
                 getLog().info("generate lib skipped"); // NOI18N
             }
-            
+
             return;
         }
 
         try {
             generateStructure();
         } catch (final Exception e) {
-            final String message = "cannot generate structure";  // NOI18N
+            final String message = "cannot generate structure"; // NOI18N
             if (getLog().isErrorEnabled()) {
                 getLog().error(message);
             }
@@ -266,6 +267,25 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         jnlp.getResources().add(resources);
+
+        String classPath = " ";
+
+        for (final Artifact dep : dependencies) {
+            classPath += dep.getFile().getName().toString() + ".jar ";
+        }
+        // Generate Manifest and jar File
+        final Manifest manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classPath);
+
+        // write the jar file
+        final JarOutputStream target = new JarOutputStream(new FileOutputStream(
+                    new File(dir, artifactProject.getName().replace(" ", "_") + "_" + nameSuffix + ".jar")),
+                manifest);
+        target.close();
+        if (getLog().isInfoEnabled()) {
+            getLog().info("created jar: " + artifactProject.getName().replace(" ", "_") + "_" + nameSuffix + ".jar"); // NOI18N
+        }
 
         // write the jnlp
         final File outFile = new File(dir, artifactProject.getName().replace(" ", "_") + "_" + nameSuffix + ".jnlp"); // NOI18N
