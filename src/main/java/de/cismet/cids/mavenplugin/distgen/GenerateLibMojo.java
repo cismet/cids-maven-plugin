@@ -64,7 +64,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * The directory where the lib directory shall be created in.
      *
-     * @parameter  expression="${cids.generate-lib.outputDirectory}
+     * @parameter  expression="${cids.generate-lib.outputDirectory}" default-value="target/generate-lib-out"
      * @required   true
      */
     private transient File outputDirectory;
@@ -120,7 +120,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     }
 
     /**
-     * Generates the basic lib structure consiting of a lib folder, an int folder and an ext folder. The lib folder is
+     * Generates the basic lib structure consisting of a lib folder, an int folder and an ext folder. The lib folder is
      * created within the outputDirectory.
      *
      * @return  the generated lib folder <code>File</code>

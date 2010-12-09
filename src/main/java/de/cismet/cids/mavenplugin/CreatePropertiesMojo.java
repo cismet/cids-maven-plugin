@@ -67,42 +67,16 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
      * <br/>
      *
      * <ul>
+     *   <li>all jars within the folder specified by <code>de.cismet.cids.lib.local</code> property</li>
      *   <li>the project's output directory</li>
      *   <li>the project's runtime artifacts</li>
      *   <li>the project's system artifacts</li>
-     *   <li>all jars within the folder specified by <code>de.cismet.cids.lib.local</code> property</li>
      * </ul>
      */
     private void createClasspathProperty() {
         final StringBuilder sb = new StringBuilder();
 
-        // first add the project's output directory
-        sb.append(project.getBuild().getOutputDirectory()).append(File.pathSeparatorChar);
-
-        // collect runtime artifacts and append them to the classpath string
-        for (final Object o : project.getRuntimeArtifacts()) {
-            final Artifact artifact = (Artifact)o;
-            sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
-        }
-
-        // also collect system artifacts and append them to the classpath string [issue:1456]
-        // we will have to iterate over all dependency artifacts because project.getSystemArtifacts() is a trap...
-        boolean first = true;
-        for (final Object o : project.getDependencyArtifacts()) {
-            final Artifact artifact = (Artifact)o;
-            if (Artifact.SCOPE_SYSTEM.equals(artifact.getScope())) {
-                if (first && getLog().isWarnEnabled()) {
-                    getLog().warn("adding system dependent libraries to classpath"); // NOI18N
-                    first = false;
-                }
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug("system-dependent library: " + artifact);         // NOI18N
-                }
-                sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
-            }
-        }
-
-        // collect local jars and append them to the classpath string
+        // first collect local jars and append them to the classpath string
         if (libLocalDir.exists()) {
             final File[] jars = libLocalDir.listFiles(
                     new FileFilter() {
@@ -127,6 +101,32 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         } else {
             if (getLog().isWarnEnabled()) {
                 getLog().warn("lib local dir property does not denote an existing filename: " + libLocalDir); // NOI18N
+            }
+        }
+
+        // then add the project's output directory
+        sb.append(project.getBuild().getOutputDirectory()).append(File.pathSeparatorChar);
+
+        // collect runtime artifacts and append them to the classpath string
+        for (final Object o : project.getRuntimeArtifacts()) {
+            final Artifact artifact = (Artifact)o;
+            sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
+        }
+
+        // also collect system artifacts and append them to the classpath string [issue:1456]
+        // we will have to iterate over all dependency artifacts because project.getSystemArtifacts() is a trap...
+        boolean first = true;
+        for (final Object o : project.getDependencyArtifacts()) {
+            final Artifact artifact = (Artifact)o;
+            if (Artifact.SCOPE_SYSTEM.equals(artifact.getScope())) {
+                if (first && getLog().isWarnEnabled()) {
+                    getLog().warn("adding system dependent libraries to classpath"); // NOI18N
+                    first = false;
+                }
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug("system-dependent library: " + artifact);         // NOI18N
+                }
+                sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
             }
         }
 
