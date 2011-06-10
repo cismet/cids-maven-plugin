@@ -8,11 +8,18 @@
 package de.cismet.cids.mavenplugin.distgen;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.ArtifactCollector;
+import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
+import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingException;
-
-import org.codehaus.plexus.util.FileUtils;
+import org.apache.maven.shared.dependency.tree.DependencyNode;
+import org.apache.maven.shared.dependency.tree.DependencyTreeBuilder;
+import org.apache.maven.shared.dependency.tree.DependencyTreeBuilderException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -21,7 +28,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.jar.Attributes;
@@ -29,9 +38,9 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
 import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 
+import de.cismet.cids.jnlp.Extension;
 import de.cismet.cids.jnlp.Homepage;
 import de.cismet.cids.jnlp.Information;
 import de.cismet.cids.jnlp.Jar;
@@ -51,10 +60,6 @@ import de.cismet.cids.mavenplugin.AbstractCidsMojo;
  */
 // TODO: this class should be totally refactored as the design is awkward
 public class GenerateLibMojo extends AbstractCidsMojo {
-
-    //~ Static fields/initializers ---------------------------------------------
-
-    private static final String INT_GID_PREFIX = "de.cismet"; // NOI18N
 
     //~ Instance fields --------------------------------------------------------
 
@@ -92,16 +97,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     private transient String homepage;
 
     /**
-     * If true the library directories will be populated with all the dependencies of the given applications. If false
-     * the directories will only contain generated jnlps and classpath jars and the m2 repo layout will be used as lib
-     * base.
-     *
-     * @parameter  expression="${cids.generate-lib.legacy}" default-value="false"
-     * @required   false
-     */
-    private transient Boolean legacy;
-
-    /**
      * The <code>codebase</code> URL is the pendant to the outputDirectory. It serves as a pointer to the publicly
      * hosted distribution and will be used in <code>jnlp</code> file generation. If the parameter is not provided,
      * <code>classpath-jnlp</code> files won't be generated.
@@ -123,14 +118,40 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @required   false
      */
     private transient String m2codebase;
-    
+
     /**
-     * The <code>addtionalJarCodebase</code> points to the directory where additional jars are hosted. These additional
-     * jars are only relevant for the 
+     * Allows for more fine grained generation options.
+     *
+     * @parameter
      */
-    private transient String additionalJarCodebase;
-    
-    private transient String[] additionalJars;
+    private transient DependencyEx[] dependencyConfiguration;
+
+    /**
+     * The artifact repository to use.
+     *
+     * @parameter  expression="${localRepository}"
+     * @required
+     * @readonly
+     */
+    private transient ArtifactRepository localRepository;
+
+    /**
+     * The artifact collector to use.
+     *
+     * @component
+     * @required
+     * @readonly
+     */
+    private transient ArtifactCollector artifactCollector;
+
+    /**
+     * The dependency tree builder to use.
+     *
+     * @component
+     * @required
+     * @readonly
+     */
+    private DependencyTreeBuilder dependencyTreeBuilder;
 
     //~ Methods ----------------------------------------------------------------
 
@@ -149,25 +170,492 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             return;
         }
 
-        try {
-            generateStructure();
-        } catch (final Exception e) {
-            final String message = "cannot generate structure"; // NOI18N
-            if (getLog().isErrorEnabled()) {
-                getLog().error(message);
-            }
-            throw new MojoExecutionException(message, e);
-        }
-
-        // get all direct artifacts of the project and populate the lib folder
+        // get all direct artifacts of the project and scan through the dependency configuration if there is some
+        // additional requirement to the dependency artifacts
         final Set<Artifact> dependencies = project.getDependencyArtifacts();
+        final Set<ArtifactEx> accepted = new LinkedHashSet<ArtifactEx>(dependencies.size());
         for (final Artifact artifact : dependencies) {
             // only accept artifacts neccessary for runtime
             if (Artifact.SCOPE_COMPILE.equals(artifact.getScope())
                         || Artifact.SCOPE_RUNTIME.equals(artifact.getScope())) {
-                populateLibDir(artifact);
+                accepted.add(getExtendedArtifact(artifact));
             }
         }
+
+        final List<ArtifactEx> ordered = determineProcessingOrder(accepted);
+
+        if (getLog().isDebugEnabled()) {
+            getLog().debug("order: " + ordered); // NOI18N
+        }
+
+        final List<ArtifactEx> processed = new ArrayList<ArtifactEx>(ordered.size());
+
+        for (final ArtifactEx toProcess : ordered) {
+            processArtifact(toProcess, processed);
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   artifactEx  DOCUMENT ME!
+     * @param   processed   DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private void processArtifact(final ArtifactEx artifactEx, final List<ArtifactEx> processed)
+            throws MojoExecutionException {
+        if (getLog().isDebugEnabled()) {
+            getLog().debug("processing artifact: " + artifactEx); // NOI18N
+        }
+
+        final ArtifactEx virtualParent = createVirtualArtifact(artifactEx);
+        if (artifactEx.getDependencyEx().isGenerateJar()) {
+            // search for already processed child artifacts
+            ArtifactEx child = null;
+            for (int i = processed.size() - 1; i >= 0; --i) {
+                final ArtifactEx current = processed.get(i);
+                if (current.getDependencyEx().isGenerateJar()
+                            && isChildOf(artifactEx.getDependencyTreeRoot(), current.getArtifact())) {
+                    child = processed.get(i);
+
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug("found jar child: " + child + " for artifact: " + artifactEx); // NOI18N
+                    }
+
+                    break;
+                }
+            }
+
+            artifactEx.setClassPathJar(generateJar(artifactEx, child));
+
+            if (virtualParent != null) {
+                artifactEx.setExtendedClassPathJar(generateJar(virtualParent, artifactEx));
+            }
+        }
+
+        if (artifactEx.getDependencyEx().isGenerateJnlp()) {
+            if (codebase == null) {
+                throw new MojoExecutionException(
+                    "if jnlp classpath generation is activated, you must provide a codebase"); // NOI18N
+            }
+
+            // search for already processed child artifacts and generate if found
+            ArtifactEx child = null;
+            for (int i = processed.size() - 1; i >= 0; --i) {
+                final ArtifactEx current = processed.get(i);
+                if (current.getDependencyEx().isGenerateJnlp()
+                            && isChildOf(artifactEx.getDependencyTreeRoot(), current.getArtifact())) {
+                    child = processed.get(i);
+
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug("found jnlp child: " + child + " for artifact: " + artifactEx); // NOI18N
+                    }
+
+                    break;
+                }
+            }
+
+            artifactEx.setClassPathJnlp(generateJnlp(artifactEx, child));
+
+            if (virtualParent != null) {
+                artifactEx.setExtendedClassPathJnlp(generateJnlp(virtualParent, artifactEx));
+            }
+        }
+
+        processed.add(artifactEx);
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   artifactEx  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private ArtifactEx createVirtualArtifact(final ArtifactEx artifactEx) throws MojoExecutionException {
+        // prepare virtual project for additional dependencies if present
+        final Dependency[] additionalDeps = artifactEx.getDependencyEx().getAdditionalDependencies();
+
+        final ArtifactEx extParent;
+        if ((additionalDeps == null) || (additionalDeps.length == 0)) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug(
+                    "no additional dependencies present, skip virtual artifact generation for artifact: " // NOI18N
+                            + artifactEx);
+            }
+
+            extParent = null;
+        } else {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("generating virtual artifact for artifact: " + artifactEx); // NOI18N
+            }
+
+            final Model model = createModel(artifactEx);
+            final MavenProject extProject = new MavenProject(model);
+
+            extProject.setArtifact(factory.createBuildArtifact(
+                    extProject.getGroupId(),
+                    extProject.getArtifactId(),
+                    extProject.getVersion(),
+                    extProject.getPackaging()));
+
+            extParent = new ArtifactEx(extProject.getArtifact());
+            extParent.setVirtualProject(extProject);
+        }
+
+        return extParent;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   artifactEx  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private Model createModel(final ArtifactEx artifactEx) throws MojoExecutionException {
+        final Model model = new Model();
+        final Artifact artifact = artifactEx.getArtifact();
+
+        final MavenProject artifactProject;
+        try {
+            artifactProject = resolveProject(artifact);
+        } catch (ProjectBuildingException ex) {
+            final String message = "cannot create maven project from artifact: " + artifact; // NOI18N
+            getLog().error(message, ex);
+
+            throw new MojoExecutionException(message, ex);
+        }
+
+        model.setParent(artifactProject.getModel().getParent());
+
+        model.setGroupId(artifactProject.getGroupId());
+        model.setArtifactId(artifactProject.getArtifactId() + "-ext"); // NOI18N
+        model.setVersion(artifactProject.getVersion());
+        model.setName(artifactProject.getName() + " Extended");        // NOI18N
+
+        final Dependency[] additionalDeps = artifactEx.getDependencyEx().getAdditionalDependencies();
+        if (additionalDeps != null) {
+            for (final Dependency dep : additionalDeps) {
+                model.addDependency(dep);
+            }
+        }
+
+        return model;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   parent  DOCUMENT ME!
+     * @param   child   DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     * @throws  IllegalStateException   DOCUMENT ME!
+     */
+    private File generateJar(final ArtifactEx parent, final ArtifactEx child) throws MojoExecutionException {
+        final Artifact parentArtifact = parent.getArtifact();
+        final boolean virtual = parent.isVirtual();
+
+        if (virtual && (parent.getVirtualProject() == null)) {
+            throw new IllegalStateException(
+                "if we deal with a virtual artifact, there must be a virtual project attached"); // NOI18N
+        }
+
+        final StringBuilder classpath;
+        // we don't append the parent artifact's file path if the artifact is virtual
+        if (virtual) {
+            classpath = new StringBuilder();
+        } else {
+            classpath = new StringBuilder(parentArtifact.getFile().getAbsolutePath());
+            classpath.append(' ');
+        }
+
+        final ArtifactFilter filter;
+        if ((child == null) || (child.getClassPathJar() == null)) {
+            filter = new ScopeArtifactFilter(Artifact.SCOPE_RUNTIME);
+        } else {
+            filter = new ChildDependencyFilter(child);
+            classpath.append(child.getClassPathJar().getAbsolutePath()).append(' ');
+        }
+
+        JarOutputStream target = null;
+        try {
+            final Set<Artifact> resolved;
+            if (virtual) {
+                resolved = resolveArtifacts(parent.getVirtualProject(), Artifact.SCOPE_RUNTIME, filter);
+            } else {
+                resolved = resolveArtifacts(parentArtifact, Artifact.SCOPE_RUNTIME, filter);
+            }
+
+            for (final Artifact dep : resolved) {
+                classpath.append(dep.getFile().getAbsolutePath()).append(' ');
+            }
+
+            // Generate Manifest and jar File
+            final Manifest manifest = new Manifest();
+            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
+            manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
+
+            final String resourceBaseName = parentArtifact.getArtifactId() + "-" + parentArtifact.getVersion() // NOI18N
+                        + "-classpath";                                                                        // NOI18N
+
+            // write the jar file
+            final File jar = new File(generateStructure(), resourceBaseName + ".jar"); // NOI18N
+            target = new JarOutputStream(new FileOutputStream(jar), manifest);
+
+            if (getLog().isInfoEnabled()) {
+                getLog().info("generated jar: " + jar);
+            }
+
+            return jar;
+        } catch (final Exception ex) {
+            final String message = "cannot generate jar for artifact: " + parent + " || child: " + child; // NOI18N
+            getLog().error(message, ex);
+
+            throw new MojoExecutionException(message, ex);
+        } finally {
+            if (target != null) {
+                try {
+                    target.close();
+                } catch (final IOException e) {
+                    if (getLog().isWarnEnabled()) {
+                        getLog().warn("cannot close jar output stream", e); // NOI18N
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   parent  DOCUMENT ME!
+     * @param   child   DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     * @throws  IllegalStateException   DOCUMENT ME!
+     */
+    private Jnlp generateJnlp(final ArtifactEx parent, final ArtifactEx child) throws MojoExecutionException {
+        final Artifact parentArtifact = parent.getArtifact();
+        final boolean virtual = parent.isVirtual();
+
+        if (virtual && (parent.getVirtualProject() == null)) {
+            throw new IllegalStateException(
+                "if we deal with a virtual artifact, there must be a virtual project attached"); // NOI18N
+        }
+
+        final ObjectFactory objectFactory = new ObjectFactory();
+        final Jnlp jnlp = objectFactory.createJnlp();
+        jnlp.setSpec("1.0+"); // NOI18N
+        final Information info = objectFactory.createInformation();
+
+        final Resources resources = objectFactory.createResources();
+        final List jars = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
+
+        final MavenProject artifactProject;
+        if (virtual) {
+            artifactProject = parent.getVirtualProject();
+        } else {
+            try {
+                artifactProject = resolveProject(parentArtifact);
+            } catch (final ProjectBuildingException ex) {
+                final String message = "cannot build artifact project from artifact: " + parent; // NOI18N
+                getLog().error(message, ex);
+
+                throw new MojoExecutionException(message, ex);
+            }
+
+            final Jar self = objectFactory.createJar();
+
+            self.setHref(generateJarHRef(parentArtifact));
+
+            jars.add(self);
+        }
+
+        assert artifactProject != null : "artifact project must not be null"; // NOI18N
+
+        // set jnlp info
+        info.setTitle(artifactProject.getName());
+        if (vendor != null) {
+            info.setVendor(vendor);
+        }
+        if (homepage != null) {
+            final Homepage hp = objectFactory.createHomepage();
+            hp.setHref(homepage);
+            info.setHomepage(hp);
+        }
+        jnlp.getInformation().add(info);
+
+        final ArtifactFilter filter;
+        if ((child == null) || (child.getClassPathJnlp() == null)) {
+            filter = new ScopeArtifactFilter(Artifact.SCOPE_RUNTIME);
+        } else {
+            filter = new ChildDependencyFilter(child);
+
+            // add the child jnlp extension
+            final Extension extension = objectFactory.createExtension();
+            extension.setHref(child.getClassPathJnlp().getHref());
+
+            jars.add(extension);
+        }
+
+        final Set<Artifact> resolved;
+        try {
+            if (virtual) {
+                resolved = resolveArtifacts(parent.getVirtualProject(), Artifact.SCOPE_RUNTIME, filter);
+            } else {
+                resolved = resolveArtifacts(parentArtifact, Artifact.SCOPE_RUNTIME, filter);
+            }
+        } catch (final Exception ex) {
+            final String message = "cannot resolve artifacts for artifact: " + parent; // NOI18N
+            getLog().error(message, ex);
+
+            throw new MojoExecutionException(message, ex);
+        }
+
+        for (final Artifact dep : resolved) {
+            final Jar jar = objectFactory.createJar();
+
+            jar.setHref(generateJarHRef(dep));
+
+            jars.add(jar);
+        }
+
+        jnlp.getResources().add(resources);
+
+        final String resourceBaseName = parentArtifact.getArtifactId() + "-" + parentArtifact.getVersion() // NOI18N
+                    + "-classpath";                                                                        // NOI18N
+
+        // write the jnlp
+        final String trimmedCodebase = trimSlash(codebase.toString());
+        try {
+            final String jnlpName = resourceBaseName + ".jnlp"; // NOI18N
+            jnlp.setCodebase(trimmedCodebase);
+            jnlp.setHref(generateSelfHRef(codebase, jnlpName));
+
+            final File outFile = new File(generateStructure(), jnlpName);
+            final JAXBContext jaxbContext = JAXBContext.newInstance("de.cismet.cids.jnlp"); // NOI18N
+            final Marshaller marshaller = jaxbContext.createMarshaller();
+            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+            marshaller.setProperty(Marshaller.JAXB_ENCODING, "UTF-8");                      // NOI18N
+            marshaller.marshal(jnlp, outFile);
+
+            if (getLog().isInfoEnabled()) {
+                getLog().info("generated jnlp: " + outFile); // NOI18N
+            }
+
+            return jnlp;
+        } catch (final Exception e) {
+            final String message = "cannot create classpath jnlp for artifact " + parent; // NOI18N
+            getLog().error(message, e);                                                   // NOI18N
+
+            throw new MojoExecutionException(message, e);
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   artifacts  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private List<ArtifactEx> determineProcessingOrder(final Set<ArtifactEx> artifacts) throws MojoExecutionException {
+        final LinkedList<ArtifactEx> list = new LinkedList<ArtifactEx>();
+
+        for (final ArtifactEx artifactEx : artifacts) {
+            try {
+                final MavenProject artifactProject = resolveProject(artifactEx.getArtifact());
+                final DependencyNode root = dependencyTreeBuilder.buildDependencyTree(
+                        artifactProject,
+                        localRepository,
+                        factory,
+                        artifactMetadataSource,
+                        new ScopeArtifactFilter(Artifact.SCOPE_RUNTIME),
+                        artifactCollector);
+                artifactEx.setDependencyTreeRoot(root);
+
+                int insertionIndex = 0;
+                for (int i = 0; i < list.size(); ++i) {
+                    if (isChildOf(root, list.get(i).getArtifact())) {
+                        insertionIndex = i + 1;
+                    }
+                }
+
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(insertionIndex + " is insertion index for artifact: " + artifactEx);
+                }
+
+                list.add(insertionIndex, artifactEx);
+            } catch (final ProjectBuildingException ex) {
+                final String message = "cannot resolve maven project for artifact: " + artifactEx.getArtifact(); // NOI18N
+                getLog().error(message, ex);
+
+                throw new MojoExecutionException(message, ex);
+            } catch (final DependencyTreeBuilderException ex) {
+                final String message = "cannot build dependency tree for artifact: " + artifactEx.getArtifact(); // NOI18N
+                getLog().error(message, ex);
+
+                throw new MojoExecutionException(message, ex);
+            }
+        }
+
+        return list;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   current  DOCUMENT ME!
+     * @param   toCheck  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    public static boolean isChildOf(final DependencyNode current, final Artifact toCheck) {
+        // DFS
+        for (final Object o : current.getChildren()) {
+            final DependencyNode child = (DependencyNode)o;
+
+            if (child.getArtifact().equals(toCheck)) {
+                return true;
+            } else if (isChildOf(child, toCheck)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   artifact  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    private ArtifactEx getExtendedArtifact(final Artifact artifact) {
+        if ((artifact != null) && (dependencyConfiguration != null)) {
+            for (final DependencyEx dep : dependencyConfiguration) {
+                if (dep.getGroupId().equals(artifact.getGroupId())
+                            && dep.getArtifactId().equals(artifact.getArtifactId())) {
+                    return new ArtifactEx(artifact, dep);
+                }
+            }
+        }
+
+        return new ArtifactEx(artifact);
     }
 
     /**
@@ -184,213 +672,20 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             throw new IOException("could not create lib folder"); // NOI18N
         }
 
-        final File extDir = new File(libDir, LIB_EXT_DIR);
-        if (!extDir.exists() && !extDir.isDirectory() && !extDir.mkdir()) {
-            throw new IOException("could not create ext folder"); // NOI18N
-        }
-
-        final File intDir = new File(libDir, LIB_INT_DIR);
-        if (!intDir.exists() && !intDir.isDirectory() && !intDir.mkdir()) {
-            throw new IOException("could not create int folder"); // NOI18N
-        }
-
         return libDir;
-    }
-
-    /**
-     * Populates the lib dir with the given artifact's runtime dependencies. The dependecies are split into "ext" and
-     * "int" dependencies using the <code>INT_GID_PREFIX</code>.
-     *
-     * @param   artifact  the artifact whose dependencies are being copied
-     *
-     * @throws  MojoExecutionException  if any error occurs during population
-     */
-    private void populateLibDir(final Artifact artifact) throws MojoExecutionException {
-        if (getLog().isDebugEnabled()) {
-            getLog().debug("populate libdir for artifact: " + artifact); // NOI18N
-        }
-
-        try {
-            final Set<Artifact> resolved = resolveArtifacts(artifact, Artifact.SCOPE_RUNTIME);
-
-            // split the artifacts in ext and int artifacts
-            final Set<Artifact> extArtifacts = new LinkedHashSet<Artifact>();
-            final Set<Artifact> intArtifacts = new LinkedHashSet<Artifact>();
-
-            // add the artifact itself
-            intArtifacts.add(artifact);
-
-            for (final Artifact dep : resolved) {
-                if (dep.getGroupId().startsWith(INT_GID_PREFIX)) {
-                    intArtifacts.add(dep);
-                } else {
-                    extArtifacts.add(dep);
-                }
-            }
-
-            // external dependencies
-            populateDir(
-                artifact,
-                extArtifacts,
-                new File(outputDirectory, LIB_DIR + File.separator + LIB_EXT_DIR),
-                LIB_EXT_DIR);
-            // internal dependencies
-            populateDir(
-                artifact,
-                intArtifacts,
-                new File(outputDirectory, LIB_DIR + File.separator + LIB_INT_DIR),
-                LIB_INT_DIR);
-        } catch (final Exception ex) {
-            final String message = "could not resolve dependencies for artifact: " + artifact; // NOI18N
-            if (getLog().isErrorEnabled()) {
-                getLog().error(message, ex);
-            }
-
-            throw new MojoExecutionException(message, ex);
-        }
-    }
-
-    /**
-     * Populates the given dir with the given dependencies. Additionally a jnlp file will be generated containing
-     * jar-entries for any dependency in the dependency set. The jnlp file will be named like that: name of the given
-     * artifact's project + "_" + the given name suffix + ".jnlp".<br>
-     * If <code>copyBaseArtifact</code> is true the given artifact will be copied and added to the jnlp, too.
-     *
-     * @param   artifact      the artifact which is the basis for this population
-     * @param   dependencies  the resolved dependencies of the artifact
-     * @param   dir           the directory where all the files shall be placed
-     * @param   nameSuffix    the suffix to be appended artifact's project name
-     *
-     * @throws  IOException               if the dependencies cannot be copied to the given dir
-     * @throws  JAXBException             if the jnlp file cannot be created
-     * @throws  ProjectBuildingException  if the maven project cannot be resolved for the given artifact
-     * @throws  IllegalArgumentException  if the given dir is null or not a directory or the nameSuffix is null
-     */
-    private void populateDir(
-            final Artifact artifact,
-            final Set<Artifact> dependencies,
-            final File dir,
-            final String nameSuffix) throws IOException, JAXBException, ProjectBuildingException {
-        if ((artifact == null) || (dependencies == null)) {
-            return;
-        }
-        if ((dir == null) || !dir.isDirectory()) {
-            throw new IllegalArgumentException("dir must not be null or no directory: " + dir); // NOI18N
-        }
-        if (nameSuffix == null) {
-            throw new IllegalArgumentException("suffix must not be null");                      // NOI18N
-        }
-
-        final ObjectFactory objectFactory = new ObjectFactory();
-        final Jnlp jnlp = objectFactory.createJnlp();
-        jnlp.setSpec("1.0+"); // NOI18N
-        final Information info = objectFactory.createInformation();
-
-        // set jnlp info title
-        final MavenProject artifactProject = resolveProject(artifact);
-        if (nameSuffix != null) {
-            info.setTitle(artifactProject.getName() + " " + nameSuffix);
-        }
-        if (vendor != null) {
-            info.setVendor(vendor);
-        }
-        if (homepage != null) {
-            final Homepage hp = objectFactory.createHomepage();
-            hp.setHref(homepage);
-            info.setHomepage(hp);
-        }
-
-        jnlp.getInformation().add(info);
-
-        final Resources resources = objectFactory.createResources();
-        final List jars = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
-
-        for (final Artifact dep : dependencies) {
-            final Jar jar = objectFactory.createJar();
-
-            if (legacy) {
-                jar.setHref(dep.getFile().getName());
-                FileUtils.copyFileToDirectory(dep.getFile(), dir);
-            } else {
-                jar.setHref(generateJarHRef(dep));
-            }
-
-            jars.add(jar);
-        }
-
-        jnlp.getResources().add(resources);
-
-        final StringBuilder classPath = new StringBuilder();
-
-        if (legacy) {
-            for (final Artifact dep : dependencies) {
-                classPath.append(dep.getFile().getName()).append(' ');
-            }
-        } else {
-            for (final Artifact dep : dependencies) {
-                classPath.append(dep.getFile().getAbsolutePath()).append(' ');
-            }
-        }
-        // Generate Manifest and jar File
-        final Manifest manifest = new Manifest();
-        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
-        manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classPath.toString());
-
-        final String resourceBaseName = artifactProject.getArtifactId() + "-" + artifactProject.getVersion() // NOI18N
-                    + "-"                                                                                    // NOI18N
-                    + nameSuffix;
-
-        // write the jar file
-        final JarOutputStream target = new JarOutputStream(new FileOutputStream(
-                    new File(dir, resourceBaseName + ".jar")), // NOI18N
-                manifest);
-        target.close();
-        if (getLog().isInfoEnabled()) {
-            getLog().info("created jar: " + resourceBaseName + ".jar"); // NOI18N
-        }
-
-        // write the jnlp
-        if (codebase == null) {
-            if (getLog().isInfoEnabled()) {
-                getLog().info("codebase not provided, not generating classpath-jnlps"); // NOI18N
-            }
-        } else {
-            final String trimmedCodebase = trimSlash(codebase.toString());
-            try {
-                final String jnlpName = resourceBaseName + ".jnlp";                     // NOI18N
-                jnlp.setCodebase(trimmedCodebase);
-                jnlp.setHref(generateSelfHRef(codebase, nameSuffix, jnlpName));
-
-                final File outFile = new File(dir, jnlpName);
-                final JAXBContext jaxbContext = JAXBContext.newInstance("de.cismet.cids.jnlp"); // NOI18N
-                final Marshaller marshaller = jaxbContext.createMarshaller();
-                marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-                marshaller.setProperty(Marshaller.JAXB_ENCODING, "UTF-8");                      // NOI18N
-                marshaller.marshal(jnlp, outFile);
-
-                if (getLog().isInfoEnabled()) {
-                    getLog().info("created jnlp: " + outFile);                                     // NOI18N
-                }
-            } catch (final Exception e) {
-                if (getLog().isWarnEnabled()) {
-                    getLog().warn("cannot create classpath jnlp for dependencies: " + nameSuffix); // NOI18N
-                }
-            }
-        }
     }
 
     /**
      * DOCUMENT ME!
      *
-     * @param   codebase    DOCUMENT ME!
-     * @param   nameSuffix  DOCUMENT ME!
-     * @param   jnlpName    DOCUMENT ME!
+     * @param   codebase  DOCUMENT ME!
+     * @param   jnlpName  DOCUMENT ME!
      *
      * @return  DOCUMENT ME!
      *
      * @throws  IllegalArgumentException  DOCUMENT ME!
      */
-    private String generateSelfHRef(final URL codebase, final String nameSuffix, final String jnlpName) {
+    private String generateSelfHRef(final URL codebase, final String jnlpName) {
         if (codebase == null) {
             throw new IllegalArgumentException("codebase must not be null"); // NOI18N
         }
@@ -402,8 +697,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         sb.append(LIB_DIR);
-        sb.append('/');
-        sb.append(nameSuffix);
         sb.append('/');
         sb.append(jnlpName);
 
