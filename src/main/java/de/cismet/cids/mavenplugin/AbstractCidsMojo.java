@@ -15,6 +15,7 @@ import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.logging.Log;
@@ -115,7 +116,8 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     //~ Methods ----------------------------------------------------------------
 
     /**
-     * Resolves the dependencies of the given artifact with the given scope.
+     * Resolves the dependencies of the given artifact with the given scope. Uses a {@link ScopeArtifactFilter} with the
+     * given scope to resolve the artifacts.
      *
      * @param   artifact  the artifact whose dependencies shall be resolved
      * @param   scope     the scope applied to the resolve process
@@ -125,30 +127,71 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @throws  ProjectBuildingException           if no maven project can be build from the artifact information
      * @throws  InvalidDependencyVersionException  if the artifacts cannot be created from the created maven project
      * @throws  ArtifactResolutionException        if an artifact of the given artifact cannot be resolved
-     * @throws  ArtifactNotFoundException          if an artifact of the fiven artifact cannot be found
+     * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope)
             throws ProjectBuildingException,
                 InvalidDependencyVersionException,
                 ArtifactResolutionException,
                 ArtifactNotFoundException {
-        final Log log = getLog();
+        return resolveArtifacts(artifact, scope, new ScopeArtifactFilter(scope));
+    }
 
+    /**
+     * Resolves the dependencies of the given artifact with the given scope and the given filter.
+     *
+     * @param   artifact  the artifact whose dependencies shall be resolved
+     * @param   scope     the scope applied to the resolve process
+     * @param   filter    the <code>ArtifactFilter</code> to apply
+     *
+     * @return  all the dependencies artifacts of the given artifact
+     *
+     * @throws  ProjectBuildingException           if no maven project can be build from the artifact information
+     * @throws  InvalidDependencyVersionException  if the artifacts cannot be created from the created maven project
+     * @throws  ArtifactResolutionException        if an artifact of the given artifact cannot be resolved
+     * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
+     */
+    protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope, final ArtifactFilter filter)
+            throws ProjectBuildingException,
+                InvalidDependencyVersionException,
+                ArtifactResolutionException,
+                ArtifactNotFoundException {
         // create a maven project from the pom
         final MavenProject pomProject = resolveProject(artifact);
-        if (log.isDebugEnabled()) {
-            log.debug("created mavenproject from pom '" + artifact + "': " + pomProject); // NOI18N
+        if (getLog().isDebugEnabled()) {
+            getLog().debug("created mavenproject from pom '" + artifact + "': " + pomProject); // NOI18N
         }
 
-        // resolve all runtime artifacts from the created project
-        final Set runtimeArtifacts = pomProject.createArtifacts(factory, scope, new ScopeArtifactFilter(scope));
-        if (log.isDebugEnabled()) {
-            log.debug("runtime artifacts of project '" + pomProject + "': " + runtimeArtifacts); // NOI18N
+        return resolveArtifacts(pomProject, scope, filter);
+    }
+
+    /**
+     * Resolves the dependencies of the given project with the given scope and the given filter.
+     *
+     * @param   artifactProject  the project who's dependencies shall be resolved
+     * @param   scope            the scope applied to the resolve process
+     * @param   filter           the <code>ArtifactFilter</code> to apply
+     *
+     * @return  all the dependencies artifacts of the given project
+     *
+     * @throws  InvalidDependencyVersionException  if the artifacts cannot be created from the created maven project
+     * @throws  ArtifactResolutionException        if an artifact of the given artifact cannot be resolved
+     * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
+     */
+    protected Set<Artifact> resolveArtifacts(final MavenProject artifactProject,
+            final String scope,
+            final ArtifactFilter filter) throws InvalidDependencyVersionException,
+        ArtifactResolutionException,
+        ArtifactNotFoundException {
+        // resolve all artifacts from the project
+        final Set runtimeArtifacts = artifactProject.createArtifacts(factory, scope, filter);
+        if (getLog().isDebugEnabled()) {
+            getLog().debug("runtime artifacts of project '" + artifactProject + "': " + runtimeArtifacts); // NOI18N
         }
 
         final ArtifactResolutionResult result = resolver.resolveTransitively(
                 runtimeArtifacts,
-                artifact,
+                artifactProject.getArtifact(),
                 remoteRepos,
                 local,
                 artifactMetadataSource);
