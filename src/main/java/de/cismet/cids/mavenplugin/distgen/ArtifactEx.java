@@ -30,8 +30,10 @@ public final class ArtifactEx {
 
     private transient File classPathJar;
     private transient File extendedClassPathJar;
+    private transient File starterJar;
     private transient Jnlp classPathJnlp;
     private transient Jnlp extendedClassPathJnlp;
+    private transient Jnlp starterJnlp;
     private transient DependencyNode dependencyTreeRoot;
     private transient MavenProject virtualProject;
 
@@ -201,6 +203,42 @@ public final class ArtifactEx {
      */
     public void setExtendedClassPathJnlp(final Jnlp extendedClassPathJnlp) {
         this.extendedClassPathJnlp = extendedClassPathJnlp;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    public File getStarterJar() {
+        return starterJar;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  starterJar  DOCUMENT ME!
+     */
+    public void setStarterJar(final File starterJar) {
+        this.starterJar = starterJar;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    public Jnlp getStarterJnlp() {
+        return starterJnlp;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  starterJnlp  DOCUMENT ME!
+     */
+    public void setStarterJnlp(final Jnlp starterJnlp) {
+        this.starterJnlp = starterJnlp;
     }
 
     @Override

@@ -27,6 +27,8 @@ public final class DependencyEx extends Dependency {
 
     private transient Dependency[] additionalDependencies;
 
+    private transient StarterConfiguration starterConfiguration;
+
     //~ Constructors -----------------------------------------------------------
 
     /**
@@ -63,6 +65,7 @@ public final class DependencyEx extends Dependency {
         sb.append(", generateJar=").append(generateJar);
         sb.append(", generateJnlp=").append(generateJnlp);
         sb.append(", additionalDeps=").append(Arrays.deepToString(additionalDependencies));
+        sb.append(", starter=").append(starterConfiguration);
         sb.append(']');
 
         return sb.toString();
@@ -120,5 +123,23 @@ public final class DependencyEx extends Dependency {
      */
     public void setGenerateJnlp(final boolean generateJnlp) {
         this.generateJnlp = generateJnlp;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    public StarterConfiguration getStarterConfiguration() {
+        return starterConfiguration;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  starterConfiguration  DOCUMENT ME!
+     */
+    public void setStarterConfiguration(final StarterConfiguration starterConfiguration) {
+        this.starterConfiguration = starterConfiguration;
     }
 }

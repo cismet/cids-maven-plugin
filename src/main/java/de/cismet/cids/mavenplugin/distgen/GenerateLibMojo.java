@@ -15,13 +15,16 @@ import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.MavenProjectHelper;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.shared.dependency.tree.DependencyNode;
 import org.apache.maven.shared.dependency.tree.DependencyTreeBuilder;
 import org.apache.maven.shared.dependency.tree.DependencyTreeBuilderException;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
@@ -29,9 +32,11 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
@@ -40,13 +45,19 @@ import java.util.jar.Manifest;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 
+import de.cismet.cids.jnlp.AllPermissions;
+import de.cismet.cids.jnlp.ApplicationDesc;
+import de.cismet.cids.jnlp.Argument;
 import de.cismet.cids.jnlp.Extension;
 import de.cismet.cids.jnlp.Homepage;
 import de.cismet.cids.jnlp.Information;
+import de.cismet.cids.jnlp.J2Se;
 import de.cismet.cids.jnlp.Jar;
 import de.cismet.cids.jnlp.Jnlp;
 import de.cismet.cids.jnlp.ObjectFactory;
+import de.cismet.cids.jnlp.Property;
 import de.cismet.cids.jnlp.Resources;
+import de.cismet.cids.jnlp.Security;
 
 import de.cismet.cids.mavenplugin.AbstractCidsMojo;
 
@@ -55,7 +66,7 @@ import de.cismet.cids.mavenplugin.AbstractCidsMojo;
  *
  * @version                       $Revision$, $Date$
  * @goal                          generate-lib
- * @phase                         package
+ * @phase                         prepare-package
  * @requiresDependencyResolution  runtime
  */
 // TODO: this class should be totally refactored as the design is awkward
@@ -153,15 +164,23 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      */
     private DependencyTreeBuilder dependencyTreeBuilder;
 
+    /**
+     * Maven ProjectHelper.
+     *
+     * @component  DOCUMENT ME!
+     */
+    private transient MavenProjectHelper projectHelper;
+
     //~ Methods ----------------------------------------------------------------
 
     /**
      * Generates a lib directory from the projects dependencies.
      *
      * @throws  MojoExecutionException  if any error occurs during execution
+     * @throws  MojoFailureException    if the mojo cannot be executed due to wrong plugin configuration
      */
     @Override
-    public void execute() throws MojoExecutionException {
+    public void execute() throws MojoExecutionException, MojoFailureException {
         if (skip) {
             if (getLog().isInfoEnabled()) {
                 getLog().info("generate lib skipped"); // NOI18N
@@ -202,9 +221,10 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @param   processed   DOCUMENT ME!
      *
      * @throws  MojoExecutionException  DOCUMENT ME!
+     * @throws  MojoFailureException    DOCUMENT ME!
      */
     private void processArtifact(final ArtifactEx artifactEx, final List<ArtifactEx> processed)
-            throws MojoExecutionException {
+            throws MojoExecutionException, MojoFailureException {
         if (getLog().isDebugEnabled()) {
             getLog().debug("processing artifact: " + artifactEx); // NOI18N
         }
@@ -231,6 +251,10 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             if (virtualParent != null) {
                 artifactEx.setExtendedClassPathJar(generateJar(virtualParent, artifactEx));
+            }
+
+            if (artifactEx.getDependencyEx().getStarterConfiguration() != null) {
+                artifactEx.setStarterJar(generateStarterJar(artifactEx));
             }
         }
 
@@ -261,9 +285,264 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             if (virtualParent != null) {
                 artifactEx.setExtendedClassPathJnlp(generateJnlp(virtualParent, artifactEx));
             }
+
+            if (artifactEx.getDependencyEx().getStarterConfiguration() != null) {
+                artifactEx.setStarterJnlp(generateStarterJnlp(artifactEx));
+            }
         }
 
         processed.add(artifactEx);
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   artifactEx  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoFailureException    DOCUMENT ME!
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private File generateStarterJar(final ArtifactEx artifactEx) throws MojoFailureException, MojoExecutionException {
+        final StarterConfiguration starter = artifactEx.getDependencyEx().getStarterConfiguration();
+
+        if (starter == null) {
+            throw new MojoFailureException("starter configuration not present"); // NOI18N
+        }
+
+        final String mainClass = starter.getMainClass();
+
+        if (mainClass == null) {
+            throw new MojoFailureException("starter configuration needs main class definition"); // NOI18N
+        }
+
+        final StringBuilder classpath = new StringBuilder();
+
+        final LocalConfiguration localConfiguration = starter.getLocal();
+        final File localDir;
+        try {
+            localDir = new File(generateStructure() + File.separator + localConfiguration.getDirectory());
+            if (!localDir.exists() || !localDir.canRead()) {
+                throw new IOException("cannot read local dir: " + localDir);                  // NOI18N
+            }
+        } catch (final IOException e) {
+            final String message = "illegal local dir: " + localConfiguration.getDirectory(); // NOI18N
+            getLog().error(message, e);
+
+            throw new MojoExecutionException(message, e);
+        }
+
+        final List<String> localFileNames;
+        if (localConfiguration.getJarNames() == null) {
+            localFileNames = null;
+        } else {
+            localFileNames = new ArrayList(Arrays.asList(localConfiguration.getJarNames()));
+        }
+
+        final File[] localJars = localDir.listFiles(new FileFilter() {
+
+                    @Override
+                    public boolean accept(final File file) {
+                        if (!file.isFile()) {
+                            return false;
+                        } else if (localFileNames == null) {
+                            return file.getName().toLowerCase().endsWith(".jar"); // NOI18N
+                        } else {
+                            return localFileNames.remove(file.getName());
+                        }
+                    }
+                });
+
+        if ((localFileNames != null) && !localFileNames.isEmpty()) {
+            final StringBuilder sb = new StringBuilder();
+            for (final String s : localFileNames) {
+                sb.append(s).append(", ");
+            }
+            sb.delete(sb.length() - 2, sb.length());
+
+            getLog().warn(
+                "The following jars are not included in the starter classpath, because they are not present: " // NOI18N
+                        + sb.toString());
+        }
+
+        for (final File localJar : localJars) {
+            classpath.append(localJar.getAbsolutePath()).append(' ');
+        }
+
+        if (artifactEx.getExtendedClassPathJar() == null) {
+            classpath.append(artifactEx.getClassPathJar().getAbsolutePath());
+        } else {
+            classpath.append(artifactEx.getExtendedClassPathJar().getAbsolutePath());
+        }
+
+        // Generate Manifest and jar File
+        final Manifest manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
+        manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
+        manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, mainClass);
+
+        JarOutputStream target = null;
+        try {
+            final String resourceBaseName = artifactEx.getArtifact().getArtifactId() + "-" // NOI18N
+                        + artifactEx.getArtifact().getVersion() + "-starter";              // NOI18N
+
+            // write the jar file
+            final File jar = new File(generateStructure(), resourceBaseName + ".jar"); // NOI18N
+            target = new JarOutputStream(new FileOutputStream(jar), manifest);
+
+            projectHelper.attachArtifact(project, jar, "DO-NOT-USE"); // NOI18N
+
+            if (getLog().isInfoEnabled()) {
+                getLog().info("generated starter jar: " + jar); // NOI18N
+            }
+
+            return jar;
+        } catch (final Exception ex) {
+            final String message = "cannot generate starter jar for artifact: " + artifactEx; // NOI18N
+            getLog().error(message, ex);
+
+            throw new MojoExecutionException(message, ex);
+        } finally {
+            if (target != null) {
+                try {
+                    target.close();
+                } catch (final IOException e) {
+                    if (getLog().isWarnEnabled()) {
+                        getLog().warn("cannot close jar output stream", e); // NOI18N
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   artifactEx  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoFailureException    DOCUMENT ME!
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private Jnlp generateStarterJnlp(final ArtifactEx artifactEx) throws MojoFailureException, MojoExecutionException {
+        final StarterConfiguration starter = artifactEx.getDependencyEx().getStarterConfiguration();
+
+        if (starter == null) {
+            throw new MojoFailureException("starter configuration not present"); // NOI18N
+        }
+
+        final String mainClass = starter.getMainClass();
+
+        if (mainClass == null) {
+            throw new MojoFailureException("starter configuration needs main class definition"); // NOI18N
+        }
+
+        final ObjectFactory objectFactory = new ObjectFactory();
+        final Jnlp jnlp = objectFactory.createJnlp();
+        jnlp.setSpec("1.0+"); // NOI18N
+        final Information info = objectFactory.createInformation();
+
+        final MavenProject artifactProject;
+        try {
+            artifactProject = resolveProject(artifactEx.getArtifact());
+        } catch (final ProjectBuildingException ex) {
+            final String message = "cannot build artifact project from artifact: " + artifactEx; // NOI18N
+            getLog().error(message, ex);
+
+            throw new MojoExecutionException(message, ex);
+        }
+
+        // set jnlp info
+        info.setTitle(artifactProject.getName() + " Starter");
+        if (vendor != null) {
+            info.setVendor(vendor);
+        }
+        if (homepage != null) {
+            final Homepage hp = objectFactory.createHomepage();
+            hp.setHref(homepage);
+            info.setHomepage(hp);
+        }
+        jnlp.getInformation().add(info);
+
+        final Resources resources = objectFactory.createResources();
+        final List resourceList = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
+
+        // set java properties
+        final Java java = starter.getJava();
+        final J2Se j2se = objectFactory.createJ2Se();
+        j2se.setVersion(java.getVersion());
+        j2se.setInitialHeapSize(java.getInitialHeapSize());
+        j2se.setMaxHeapSize(java.getMaximalHeapSize());
+        resourceList.add(j2se);
+
+        // add properties
+        if (starter.getProperties() != null) {
+            for (final Entry entry : starter.getProperties().entrySet()) {
+                final Property property = objectFactory.createProperty();
+                property.setName((String)entry.getKey());
+                property.setValue((String)entry.getValue());
+
+                resourceList.add(property);
+            }
+        }
+
+        // add all local jars
+        final LocalConfiguration localConfiguration = starter.getLocal();
+        if (localConfiguration.getJarNames() == null) {
+            getLog().warn("no local jar names provided, not adding local jars");                          // NOI18N
+        } else {
+            final String localBase = generateSelfHRef(codebase, localConfiguration.getDirectory()) + "/"; // NOI18N
+            for (final String name : localConfiguration.getJarNames()) {
+                final Jar jar = objectFactory.createJar();
+                jar.setHref(localBase + name);
+
+                resourceList.add(jar);
+            }
+        }
+
+        // add the extension to the main classpath jar
+        final Extension extension = objectFactory.createExtension();
+        if (artifactEx.getExtendedClassPathJnlp() == null) {
+            extension.setHref(artifactEx.getClassPathJnlp().getHref());
+        } else {
+            extension.setHref(artifactEx.getExtendedClassPathJnlp().getHref());
+        }
+        resourceList.add(extension);
+
+        // resources are finished
+        jnlp.getResources().add(resources);
+
+        // security parameters
+        final Security security = objectFactory.createSecurity();
+        final AllPermissions allPermissions = objectFactory.createAllPermissions();
+        security.setAllPermissions(allPermissions);
+
+        // security is finished
+        jnlp.setSecurity(security);
+
+        // application section
+        final ApplicationDesc applicationDesc = objectFactory.createApplicationDesc();
+        applicationDesc.setMainClass(mainClass);
+
+        if (starter.getArguments() != null) {
+            for (final String arg : starter.getArguments()) {
+                final Argument argument = objectFactory.createArgument();
+                argument.setvalue(generateHRef(arg));
+
+                applicationDesc.getArgument().add(argument);
+            }
+        }
+
+        // application section is finished
+        jnlp.getApplicationDescOrAppletDescOrComponentDescOrInstallerDesc().add(applicationDesc);
+
+        final String jnlpName = artifactEx.getArtifact().getArtifactId() + "-" // NOI18N
+                    + artifactEx.getArtifact().getVersion()
+                    + "-starter.jnlp";                                         // NOI18N
+
+        return writeJnlp(jnlp, jnlpName);
     }
 
     /**
@@ -411,6 +690,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final File jar = new File(generateStructure(), resourceBaseName + ".jar"); // NOI18N
             target = new JarOutputStream(new FileOutputStream(jar), manifest);
 
+            projectHelper.attachArtifact(project, jar, "DO-NOT-USE");
+
             if (getLog().isInfoEnabled()) {
                 getLog().info("generated jar: " + jar);
             }
@@ -511,11 +792,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         final Set<Artifact> resolved;
         try {
-            if (virtual) {
-                resolved = resolveArtifacts(parent.getVirtualProject(), Artifact.SCOPE_RUNTIME, filter);
-            } else {
-                resolved = resolveArtifacts(parentArtifact, Artifact.SCOPE_RUNTIME, filter);
-            }
+            resolved = resolveArtifacts(artifactProject, Artifact.SCOPE_RUNTIME, filter);
         } catch (final Exception ex) {
             final String message = "cannot resolve artifacts for artifact: " + parent; // NOI18N
             getLog().error(message, ex);
@@ -533,13 +810,25 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         jnlp.getResources().add(resources);
 
-        final String resourceBaseName = parentArtifact.getArtifactId() + "-" + parentArtifact.getVersion() // NOI18N
-                    + "-classpath";                                                                        // NOI18N
+        final String jnlpName = parentArtifact.getArtifactId() + "-" + parentArtifact.getVersion() // NOI18N
+                    + "-classpath.jnlp";                                                           // NOI18N
 
-        // write the jnlp
-        final String trimmedCodebase = trimSlash(codebase.toString());
+        return writeJnlp(jnlp, jnlpName);
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   jnlp      DOCUMENT ME!
+     * @param   jnlpName  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private Jnlp writeJnlp(final Jnlp jnlp, final String jnlpName) throws MojoExecutionException {
         try {
-            final String jnlpName = resourceBaseName + ".jnlp"; // NOI18N
+            final String trimmedCodebase = trimSlash(codebase.toString());
             jnlp.setCodebase(trimmedCodebase);
             jnlp.setHref(generateSelfHRef(codebase, jnlpName));
 
@@ -556,8 +845,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             return jnlp;
         } catch (final Exception e) {
-            final String message = "cannot create classpath jnlp for artifact " + parent; // NOI18N
-            getLog().error(message, e);                                                   // NOI18N
+            final String message = "cannot create classpath jnlp: " + jnlpName; // NOI18N
+            getLog().error(message, e);                                         // NOI18N
 
             throw new MojoExecutionException(message, e);
         }
@@ -780,5 +1069,29 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         sb.append(artifact.getFile().getName());
 
         return sb.toString();
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   url  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private String generateHRef(final String url) throws MojoExecutionException {
+        try {
+            return new URL(url).toString();
+        } catch (final MalformedURLException e) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("given url is considered tobe relative: " + url, e); // NOI18N
+            }
+
+            final String trimmedCodebase = trimSlash(codebase.toString());
+            final String trimmedPath = trimSlash(url);
+
+            return trimmedCodebase + "/" + trimmedPath; // NOI18N
+        }
     }
 }
