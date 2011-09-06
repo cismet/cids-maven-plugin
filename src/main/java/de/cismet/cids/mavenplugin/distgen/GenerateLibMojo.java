@@ -367,11 +367,23 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 getLog().debug("starter jar: using local dir: " + localDir); // NOI18N
             }
 
-            if (!localDir.exists() || !localDir.canRead()) {
-                throw new IOException("cannot read local dir: " + localDir);                  // NOI18N
+            if (localDir.exists()) {
+                if (!localDir.canRead()) {
+                    throw new IOException("cannot read local dir: " + localDir);                                     // NOI18N
+                }
+            } else {
+                if (getLog().isWarnEnabled()) {
+                    getLog().warn(
+                        "starter jar: the local dir is not present and will be created, thus jars cannot be added: " // NOI18N
+                                + localDir);
+                }
+
+                if (!localDir.mkdirs()) {
+                    throw new IOException("cannot create local dir: " + localDir); // NOI18N
+                }
             }
         } catch (final IOException e) {
-            final String message = "illegal local dir: " + localConfiguration.getDirectory(); // NOI18N
+            final String message = "illegal local dir: " + getLocalDirectory(localConfiguration); // NOI18N
             getLog().error(message, e);
 
             throw new MojoExecutionException(message, e);
@@ -434,7 +446,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                         + artifactEx.getArtifact().getVersion() + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JAR; // NOI18N;
 
             // write the jar file
-            final File jar = getOutputFile(jarName, starter.getStarterAlias() + "." + FILE_EXT_JAR);
+            final File jar = getOutputFile(jarName, starter.getStarterAlias());
             target = new JarOutputStream(new FileOutputStream(jar), manifest);
 
             // close the stream to be able to sign the jar
@@ -595,7 +607,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                     + artifactEx.getArtifact().getVersion()
                     + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JNLP;          // NOI18N
 
-        return writeJnlp(jnlp, jnlpName, starter.getStarterAlias() + "." + FILE_EXT_JNLP); // NOI18N
+        return writeJnlp(jnlp, jnlpName, starter.getStarterAlias());
     }
 
     /**
@@ -1168,13 +1180,13 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 if (alias == null) {
                     return new File(generateStarterDir(), filename);
                 } else {
-                    return new File(generateStarterDir(), alias);
+                    return new File(generateStarterDir(), alias + "." + FILE_EXT_JAR);    // NOI18N
                 }
             } else if (FILE_EXT_JNLP.equals(ext)) {
                 if (alias == null) {
                     return new File(generateClientDir(), filename);
                 } else {
-                    return new File(generateClientDir(), alias);
+                    return new File(generateClientDir(), alias + "." + FILE_EXT_JNLP);    // NOI18N
                 }
             } else {
                 throw new IllegalArgumentException("unsupported file extension: " + ext); // NOI18N
