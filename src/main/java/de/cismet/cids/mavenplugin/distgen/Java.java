@@ -19,9 +19,9 @@ public final class Java {
 
     private transient String version = "1.6";
 
-    private transient String initialHeapSize = "128M";
+    private transient String initialHeapSize = "128m";
 
-    private transient String maximalHeapSize = "256M";
+    private transient String maximalHeapSize = "256m";
 
     //~ Methods ----------------------------------------------------------------
 

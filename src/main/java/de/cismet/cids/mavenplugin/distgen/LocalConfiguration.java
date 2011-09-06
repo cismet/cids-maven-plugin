@@ -17,9 +17,13 @@ import java.util.Arrays;
  */
 public final class LocalConfiguration {
 
+    //~ Static fields/initializers ---------------------------------------------
+
+    public static final String DEFAULT_LOCAL_DIR = "local"; // NOI18N
+
     //~ Instance fields --------------------------------------------------------
 
-    private transient String directory = "local"; // NOI18N
+    private transient String directory; // NOI18N
 
     private transient String[] jarNames;
 

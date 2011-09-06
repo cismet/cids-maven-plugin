@@ -30,6 +30,8 @@ public final class StarterConfiguration {
 
     private transient Properties properties;
 
+    private transient String starterAlias;
+
     //~ Methods ----------------------------------------------------------------
 
     @Override
@@ -41,6 +43,7 @@ public final class StarterConfiguration {
         sb.append(", arguments=").append(Arrays.toString(arguments)); // NOI18N
         sb.append(", properties=").append(properties);                // NOI18N
         sb.append(", local=").append(localConfiguration);             // NOI18N
+        sb.append(", starterAlias=").append(starterAlias);            // NOI18N
         sb.append(']');
 
         return sb.toString();
@@ -105,16 +108,16 @@ public final class StarterConfiguration {
      *
      * @return  DOCUMENT ME!
      */
-    public LocalConfiguration getLocal() {
+    public LocalConfiguration getLocalConfiguration() {
         return localConfiguration;
     }
 
     /**
      * DOCUMENT ME!
      *
-     * @param  localConfiguration  local DOCUMENT ME!
+     * @param  localConfiguration  DOCUMENT ME!
      */
-    public void setLocal(final LocalConfiguration localConfiguration) {
+    public void setLocalConfiguration(final LocalConfiguration localConfiguration) {
         this.localConfiguration = localConfiguration;
     }
 
@@ -134,5 +137,23 @@ public final class StarterConfiguration {
      */
     public void setProperties(final Properties properties) {
         this.properties = properties;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    public String getStarterAlias() {
+        return starterAlias;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  starterAlias  DOCUMENT ME!
+     */
+    public void setStarterAlias(final String starterAlias) {
+        this.starterAlias = starterAlias;
     }
 }
