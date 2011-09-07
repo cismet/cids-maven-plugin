@@ -442,7 +442,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         JarOutputStream target = null;
         try {
-            final String jarName = artifactEx.getArtifact().getArtifactId() + "-"                                // NOI18N
+            final String jarName = artifactEx.getArtifact().getArtifactId() + "-"                                    // NOI18N
                         + artifactEx.getArtifact().getBaseVersion() + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JAR; // NOI18N;
 
             // write the jar file
@@ -765,7 +765,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
 
             final String jarname = parentArtifact.getArtifactId() + "-" + parentArtifact.getBaseVersion() // NOI18N
-                        + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JAR;                            // NOI18N
+                        + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JAR;                                // NOI18N
 
             // write the jar file
             final File jar = getOutputFile(jarname, null);
@@ -956,7 +956,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         jnlp.getApplicationDescOrAppletDescOrComponentDescOrInstallerDesc().add(componentdesc);
 
         final String jnlpName = parentArtifact.getArtifactId() + "-" + parentArtifact.getBaseVersion() // NOI18N
-                    + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JNLP;                            // NOI18N
+                    + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JNLP;                                // NOI18N
 
         return writeJnlp(jnlp, jnlpName, null);
     }
@@ -1306,7 +1306,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         return sb.toString();
     }
-    
+
     /**
      * DOCUMENT ME!
      *
