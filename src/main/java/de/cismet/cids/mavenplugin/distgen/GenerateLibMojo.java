@@ -443,7 +443,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         JarOutputStream target = null;
         try {
             final String jarName = artifactEx.getArtifact().getArtifactId() + "-"                                // NOI18N
-                        + artifactEx.getArtifact().getVersion() + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JAR; // NOI18N;
+                        + artifactEx.getArtifact().getBaseVersion() + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JAR; // NOI18N;
 
             // write the jar file
             final File jar = getOutputFile(jarName, starter.getStarterAlias());
@@ -604,7 +604,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         jnlp.getApplicationDescOrAppletDescOrComponentDescOrInstallerDesc().add(applicationDesc);
 
         final String jnlpName = artifactEx.getArtifact().getArtifactId() + "-" // NOI18N
-                    + artifactEx.getArtifact().getVersion()
+                    + artifactEx.getArtifact().getBaseVersion()
                     + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JNLP;          // NOI18N
 
         return writeJnlp(jnlp, jnlpName, starter.getStarterAlias());
@@ -764,7 +764,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
             manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
 
-            final String jarname = parentArtifact.getArtifactId() + "-" + parentArtifact.getVersion() // NOI18N
+            final String jarname = parentArtifact.getArtifactId() + "-" + parentArtifact.getBaseVersion() // NOI18N
                         + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JAR;                            // NOI18N
 
             // write the jar file
@@ -955,7 +955,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final ComponentDesc componentdesc = objectFactory.createComponentDesc();
         jnlp.getApplicationDescOrAppletDescOrComponentDescOrInstallerDesc().add(componentdesc);
 
-        final String jnlpName = parentArtifact.getArtifactId() + "-" + parentArtifact.getVersion() // NOI18N
+        final String jnlpName = parentArtifact.getArtifactId() + "-" + parentArtifact.getBaseVersion() // NOI18N
                     + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JNLP;                            // NOI18N
 
         return writeJnlp(jnlp, jnlpName, null);
@@ -1300,13 +1300,13 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         sb.append('/');
         sb.append(artifact.getArtifactId());
         sb.append('/');
-        sb.append(artifact.getVersion());
+        sb.append(artifact.getBaseVersion());
         sb.append('/');
         sb.append(artifact.getFile().getName());
 
         return sb.toString();
     }
-
+    
     /**
      * DOCUMENT ME!
      *
