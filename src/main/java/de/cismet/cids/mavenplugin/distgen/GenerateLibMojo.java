@@ -423,7 +423,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         for (final File localJar : localJars) {
-            signJar(localJar);
+            if (!isSigned(localJar)) {
+                signJar(localJar);
+            }
 
             classpath.append(localJar.getAbsolutePath()).append(' ');
         }
@@ -451,7 +453,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             // close the stream to be able to sign the jar
             target.close();
-            signJar(jar);
+            if (!isSigned(jar)) {
+                signJar(jar);
+            }
 
             if (getLog().isInfoEnabled()) {
                 getLog().info("generated starter jar: " + jar); // NOI18N
@@ -755,7 +759,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
 
             for (final Artifact dep : resolved) {
-                signJar(dep.getFile());
+                if (!isSigned(dep.getFile())) {
+                    signJar(dep.getFile());
+                }
                 classpath.append(dep.getFile().getAbsolutePath()).append(' ');
             }
 
@@ -773,7 +779,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             // close the stream to be able to sign the jar
             target.close();
-            signJar(jar);
+            if (!isSigned(jar)) {
+                signJar(jar);
+            }
 
             if (getLog().isInfoEnabled()) {
                 getLog().info("generated jar: " + jar); // NOI18N
@@ -844,6 +852,47 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             if (getLog().isWarnEnabled()) {
                 getLog().warn("Cannot sign jar", ex); // NOI18N
             }
+        }
+    }
+
+    /**
+     * We have to use the (deprecated) maven jar plugin to verify the signature because the jarsigner plugin does not
+     * support the errorWhenNotSigned option. Maybe some later version... http://jira.codehaus.org/browse/MJARSIGNER-18
+     *
+     * @param   toSign  the file to verify
+     *
+     * @return  true if the given file is signed, false in any other case
+     */
+    private boolean isSigned(final File toSign) {
+        final String groupId = MojoExecutor.groupId("org.apache.maven.plugins"); // NOI18N
+        final String artifactId = MojoExecutor.artifactId("maven-jar-plugin");   // NOI18N
+        final String version = MojoExecutor.version("2.3.2");                    // NOI18N
+        final Plugin plugin = MojoExecutor.plugin(groupId, artifactId, version);
+
+        final String goal = MojoExecutor.goal("sign-verify"); // NOI18N
+
+        final MojoExecutor.Element archive = MojoExecutor.element("jarPath", toSign.getAbsolutePath()); // NOI18N
+        // curiously the certs option of the jarsigner is less verbose than an execution without it
+        final MojoExecutor.Element certs = MojoExecutor.element("checkCerts", String.valueOf(true)); // NOI18N
+
+        final Xpp3Dom configuration = MojoExecutor.configuration(archive, certs);
+
+        final MojoExecutor.ExecutionEnvironment environment = MojoExecutor.executionEnvironment(
+                project,
+                session,
+                pluginManager);
+
+        try {
+            MojoExecutor.executeMojo(plugin, goal, configuration, environment);
+
+            return true;
+        } catch (final Exception e) {
+            // most likely the execution failed because the signature is not present
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("cannot check jar signature: " + toSign, e); // NOI18N
+            }
+
+            return false;
         }
     }
 
@@ -933,7 +982,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         for (final Artifact dep : resolved) {
-            signJar(dep.getFile());
+            if (!isSigned(dep.getFile())) {
+                signJar(dep.getFile());
+            }
 
             final Jar jar = objectFactory.createJar();
             jar.setHref(generateJarHRef(dep));
