@@ -1,0 +1,110 @@
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>de.cismet.cids</groupId>
+    <artifactId>wunda-dist</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>WuNDa Distribution</name>
+    <description>Generates a cids distribution suited for WuNDa</description>
+    
+    <dependencies>
+        <dependency>
+            <groupId>de.cismet.cids.custom.wupp</groupId>
+            <artifactId>cids-custom-wuppertal</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>de.cismet.cids.custom.wupp.server</groupId>
+            <artifactId>cids-custom-server-wuppertal</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>de.cismet.cids</groupId>
+                <artifactId>cids-maven-plugin</artifactId>
+                <version>1.5-SNAPSHOT</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate-lib</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <vendor>cismet</vendor>
+                    <homepage>http://www.cismet.de</homepage>
+                    <codebase>http://localhost/wuppDist</codebase>
+                    <dependencyConfiguration>
+                        <dependencyEx>
+                            <groupId>de.cismet.cids.custom.wupp.server</groupId>
+                            <artifactId>cids-custom-server-wuppertal</artifactId>
+                            <generateJnlp>false</generateJnlp>
+                            <additionalDependencies>
+                                <dependency>
+                                    <groupId>de.cismet.commons</groupId>
+                                    <artifactId>cids-Utils</artifactId>
+                                    <version>1.0-SNAPSHOT</version>
+                                </dependency>
+                            </additionalDependencies>
+                            <starterConfiguration>
+                                <mainClass>de.cismet.cids.admin.serverManagement.ServerConsoleGui</mainClass>
+                            </starterConfiguration>
+                            <localConfiguration>
+                                <directory>localWuNDa</directory>
+                                <jarNames/>
+                            </localConfiguration>
+                        </dependencyEx>
+                        <dependencyEx>
+                            <groupId>de.cismet.cids.custom.wupp</groupId>
+                            <artifactId>cids-custom-wuppertal</artifactId>
+                            <generateJar>false</generateJar>
+                            <additionalDependencies>
+                                <dependency>
+                                    <groupId>de.cismet.cids</groupId>
+                                    <artifactId>default-i18n</artifactId>
+                                    <version>1.0-SNAPSHOT</version>
+                                    <classifier>de</classifier>
+                                </dependency>
+                            </additionalDependencies>
+                            <starterConfiguration>
+                                <java>
+                                    <initialHeapSize>512M</initialHeapSize>
+                                    <maximalHeapSize>1024M</maximalHeapSize>
+                                </java>
+                                <mainClass>Sirius.navigator.Navigator</mainClass>
+                                <arguments>
+                                    <argument>client/wunda/config/log4j.debug.properties</argument>
+                                    <argument>client/wunda/config/navigator.cfg</argument>
+                                    <argument>client/wunda/</argument>
+                                    <argument>client/wunda/plugins</argument>
+                                    <argument>client/wunda/search</argument>
+                                </arguments>
+                                <properties>
+                                    <property>
+                                        <name>directory.extension</name>
+                                        <value>WuNDa</value>
+                                    </property>
+                                </properties>
+                                <localConfiguration>
+                                    <directory>localWuNDa</directory>
+                                    <jarNames>
+                                        <jarName>navigatorImages.jar</jarName>
+                                        <jarName>res.jar</jarName>
+                                        <jarName>i18n.jar</jarName>
+                                    </jarNames>
+                                </localConfiguration>
+                            </starterConfiguration>
+                        </dependencyEx>
+                    </dependencyConfiguration>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

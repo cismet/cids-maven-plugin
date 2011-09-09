@@ -1,0 +1,248 @@
+ 
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <!-- 
+        required - fill in the groupId of the distribution to be generated, although it is not directly involved in the 
+                   generation process 
+     -->
+    <groupId>de.cismet.cids</groupId>
+    <!-- required - fill in the artifactId of the distribution to be generated, although it is not directly involved in 
+                    the generation process 
+     -->
+    <artifactId>sample-dist</artifactId>
+    <!-- required - fill in the version of the distribution to be generated -->
+    <version>1.0-SNAPSHOT</version>
+    <!-- required - leave value "pom" -->
+    <packaging>pom</packaging>
+
+    <!-- optional - fill in the desired name --> 
+    <name>Sample distribution</name>
+    <!-- optional - fill in the desired description -->
+    <description>Template for the cids distribution generator</description>
+    
+    <!-- 
+         required - the pom dependency section 
+                    Every dependency entry shall represents an artifact that is considered to be an application for 
+                    which the generation shall be done
+     -->
+    <dependencies>
+        <dependency>
+            <groupId>de.cismet.cids</groupId>
+            <artifactId>sample-dependency</artifactId>
+            <version>1.0</version>
+        </dependency>
+    </dependencies>
+
+    <!-- 
+        required - the pom build section
+                   The plugin configuration goes here. There is nothing to be changed except the configuration section 
+                   of the cids-maven-plugin and probably the plugin version if another version of the plugin shall be 
+                   used.
+        WARNING  - To be consistent a once created distribution (with a specific version configured above) shall not be 
+                   recreated with an another version of the plugin than the inital one!
+     -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>de.cismet.cids</groupId>
+                <artifactId>cids-maven-plugin</artifactId>
+                <!-- 
+                    required - the plugin version to use
+                    WARNING  - Only change if the distribution version is changed or if this is an initial creation 
+                 -->
+                <version>1.5-SNAPSHOT</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate-lib</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <!-- required - any distribution generation configuration is done here -->
+                <configuration>
+                    <!-- 
+                        optional - whether to skip the generation or not
+                        default  - false
+                     -->
+                    <skip>false</skip>
+                    <!-- optional - fill in the desired vendor - affects jnlp only -->
+                    <vendor>cismet</vendor>
+                    <!-- optional - fill in the desired homepage - affects jnlp only -->
+                    <homepage>http://www.cismet.de</homepage>
+                    <!-- 
+                        optional  - fill in the output directory for the generation process - relative paths will be 
+                                    resolved agains the directory this pom.xml resides in.
+                        default   - target/generate-lib-out
+                                    Every output is put in a 'lib' folder within this directory. If there is no 'lib'
+                                    directory it will be created.
+                        IMPORTANT - It is strongly recommended that the output directory is the distribution base 
+                                    directory
+                      -->
+                    <outputDirectory>target/sudplanDist</outputDirectory>
+                    <!-- 
+                        required(jnlp) - if jnlp generation shall be done the codebase url must be provided
+                        relevance      - only relevant for jnlp generation
+                        IMPORTANT      - If provided it is strongly recommended that the url points to the 
+                                         web-accessible ${outputDirectory}
+                      -->
+                    <codebase>http://sudplan.cismet.de/sudplanDist</codebase>
+                    <!-- 
+                        optional  - URL to the m2 codebase
+                        relevance - only relevant for jnlp generation
+                                    The m2codebase shall point to the directory where the m2 artifacts are hosted. If 
+                                    the parameter is parseable as an URL then it is assumed to be an absolute ref, 
+                                    otherwise it is interpreted relative to ${}codebase. If the parameter is not 
+                                    provided at all it is assumed that the m2codebase will be hosted at 
+                                    ${codebase}/lib/m2. If neither ${codebase} nor m2codebase is provided or none of 
+                                    them is absolute classpath-jnlps will not be generated.
+                        default  - lib/m2
+                      -->
+                    <m2codebase>http://repo.cismet.de</m2codebase>
+                    <!-- 
+                        optional - provide fine grained (dependency-level) generation configuration
+                      -->
+                    <dependencyConfiguration>
+                        <!-- 
+                            optional - section to provide fine grained generation configuration for a specific dependecy
+                         -->
+                        <dependencyEx>
+                            <!--
+                                required - the groupId this configuration relates to
+                                           Must match a groupId defined in the dependency section of the pom or the 
+                                           configuration cannot be attached
+                             -->
+                            <groupId>de.cismet.cids.custom.wupp.server</groupId>
+                            <!--
+                                required - the artifactId this configuration relates to
+                                           Must match an artifactId defined in the dependency section of the pom or the 
+                                           configuration cannot be attached
+                             -->
+                            <artifactId>cids-custom-server-wuppertal</artifactId>
+                            <!--
+                                optional - whether to generate jars for this dependency or not
+                                default  - true
+                             -->
+                            <generateJar>true</generateJar>
+                            <!--
+                                optional - whether to generate jnlp for this dependency or not
+                                default  - true
+                             -->
+                            <generateJnlp>true</generateJnlp>
+                            <!--
+                                optional - here one can define additional dependencies that shall be added to the 
+                                           generated classpath.
+                                           These are most likely dependencies that provide additional functionality to 
+                                           the application represented by this dependencyEx section. Provide a 
+                                           dependency section defining groupId, artifactId and version for every desired
+                                           additional dependency.
+                             -->
+                            <additionalDependencies>
+                                <dependency>
+                                    <groupId>de.cismet.cids</groupId>
+                                    <artifactId>additional-dep</artifactId>
+                                    <version>1.0</version>
+                                </dependency>
+                            </additionalDependencies>
+                            <!--
+                                optional - if starter generation shall be done provide configuration here
+                             -->
+                            <starterConfiguration>
+                                <!-- 
+                                    optional  - provide specific JVM options - 
+                                    relevance - only relevant for jnlp generation 
+                                 -->
+                                <java>
+                                    <!--
+                                        optional - execution requires a JVM at least at the specified version
+                                        default  - 1.6
+                                     -->
+                                    <version>1.6</version>
+                                    <!--
+                                        optional - the initial JVM heap size
+                                        default  - 128M
+                                     -->
+                                    <initialHeapSize>128M</initialHeapSize>
+                                    <!--
+                                        optional - the maximal JVM heap size
+                                        default  - 256M
+                                     -->
+                                    <maximalHeapSize>256M</maximalHeapSize>
+                                </java>
+                                <!--
+                                    required - the main class of this application
+                                 -->
+                                <mainClass>de.cismet.sample.Main</mainClass>
+                                <!--
+                                    optional  - additional list of commandline arguments passed to the main class
+                                    relevance - only relevant for jnlp generation
+                                                Arguments can be a fully qualified URL and will then be directly used.
+                                                Otherwise they will be resolved relative to ${codebase} resulting in an
+                                                URL like ${codebase}/path/to/my/argument.
+                                 -->
+                                <arguments>
+                                    <argument>http://my.sample.de/sampleParam</argument>
+                                    <argument>my/sample/param</argument>
+                                </arguments>
+                                <!--
+                                    optional  - additional list of properties to be passed to the JVM as a system 
+                                                property
+                                    relevance - only relevant for jnlp generation
+                                 -->
+                                <properties>
+                                    <property>
+                                        <name>user.language</name>
+                                        <value>en</value>
+                                    </property>
+                                    <property>
+                                        <name>user.country</name>
+                                        <value>GB</value>
+                                    </property>
+                                </properties>
+                                <!--
+                                    optional  - used for fine grained inclusion control of local jars in the starter 
+                                                generation
+                                    IMPORTANT - If this section is omitted the defaults will be used for starter 
+                                                generation. In addition to that there are big differences between jnlp
+                                                and jar starter generation for the local part.
+                                                
+                                 -->
+                                <localConfiguration>
+                                    <!--
+                                        optional - name of the local directory to use
+                                        default  - local
+                                                   This directory will always be resolved against the 'lib' directory
+                                                   whithin the ${outputDirectory}/${codebase}.
+                                     -->
+                                    <directory>local</directory>
+                                    <!--
+                                        optional  - list of jar names to be included as local jars
+                                        IMPORTANT - jar starter  - if this section is not provided all jars within the
+                                                                   ${local} directory will be added to the classpath.
+                                                                   Otherwise all jars of the provided list are added to
+                                                                   the classpath IF THEY ARE PRESENT
+                                                    jnlp starter - if this section is not provided NO jars will be added
+                                                                   to the classpath for various reasons (web server does
+                                                                   not support/forbids directory listing, server is not
+                                                                   available from this very machine, etc.). Otherwise
+                                                                   all jars of the provided list are added to the 
+                                                                   classpath using the following URL pattern:
+                                                                   ${codebase}/lib/${local}/&lt;jarname&gt;
+                                                                   There is NO GUARANTEE that the jar is actually 
+                                                                   available at the generated URL since for various
+                                                                   reasons.
+                                     -->
+                                    <jarNames>
+                                        <jarName>myI18n.jar</jarName>
+                                        <jarName>myRes.jar</jarName>
+                                    </jarNames>
+                                </localConfiguration>
+                            </starterConfiguration>
+                        </dependencyEx>
+                    </dependencyConfiguration>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
