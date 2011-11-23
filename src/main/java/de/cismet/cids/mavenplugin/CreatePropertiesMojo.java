@@ -12,6 +12,12 @@ import org.apache.maven.plugin.MojoExecutionException;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 
 /**
  * Goal which creates properties related to a cids project.
@@ -143,6 +149,41 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
             getLog().info("created classpath: " + classpath); // NOI18N
         }
 
-        project.getProperties().put(PROP_CIDS_CLASSPATH, classpath);
+        // to fix long classpath issue under win
+        try {
+            project.getProperties().put(PROP_CIDS_CLASSPATH, createClassPathJar(classpath).getAbsolutePath());
+        } catch (final IOException e) {
+            if (getLog().isWarnEnabled()) {
+                getLog().warn("cannot create classpath jar, using conventional classpath", e); // NOI18N
+            }
+            project.getProperties().put(PROP_CIDS_CLASSPATH, classpath);
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   classpath  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  IOException  DOCUMENT ME!
+     */
+    private File createClassPathJar(final String classpath) throws IOException {
+        // Generate Manifest and jar File
+        final Manifest manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
+        manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
+
+        final String jarname = "gen-classpath.jar"; // NOI18N
+
+        // write the jar file
+        final File jar = new File(project.getBuild().getDirectory(), jarname);
+        final JarOutputStream target = new JarOutputStream(new FileOutputStream(jar), manifest);
+
+        // close the stream to finalise file
+        target.close();
+
+        return jar;
     }
 }
