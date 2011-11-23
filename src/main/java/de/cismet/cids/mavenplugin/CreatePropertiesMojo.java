@@ -185,7 +185,8 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         // Generate Manifest and jar File
         final StringBuilder sb = new StringBuilder();
         for (final File file : cpFiles) {
-            sb.append(file.toURL().toExternalForm()).append(' ');
+            // replace all spaces with %20
+            sb.append(file.toURL().toExternalForm().replace(" ", "%20")).append(' '); // NOI18N
         }
 
         final Manifest manifest = new Manifest();
