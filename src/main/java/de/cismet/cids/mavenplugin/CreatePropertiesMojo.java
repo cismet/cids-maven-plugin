@@ -15,6 +15,8 @@ import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
@@ -81,6 +83,8 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
      */
     private void createClasspathProperty() {
         final StringBuilder sb = new StringBuilder();
+        // to collect all the files for the win long classpath issue [issue:2335]
+        final List<File> cpFiles = new ArrayList<File>();
 
         // first collect local jars and append them to the classpath string
         if (libLocalDir.exists()) {
@@ -102,6 +106,8 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
                         getLog().debug("add jar: " + jar);                            // NOI18N
                     }
                     sb.append(jar.getAbsolutePath()).append(File.pathSeparatorChar);
+                    // collect all the files for the win long classpath issue [issue:2335]
+                    cpFiles.add(jar);
                 }
             }
         } else {
@@ -112,11 +118,15 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
 
         // then add the project's output directory
         sb.append(project.getBuild().getOutputDirectory()).append(File.pathSeparatorChar);
+        // collect the folder for the win long classpath issue
+        cpFiles.add(new File(project.getBuild().getOutputDirectory()));
 
         // collect runtime artifacts and append them to the classpath string
         for (final Object o : project.getRuntimeArtifacts()) {
             final Artifact artifact = (Artifact)o;
             sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
+            // collect all the files for the win long classpath issue [issue:2335]
+            cpFiles.add(artifact.getFile());
         }
 
         // also collect system artifacts and append them to the classpath string [issue:1456]
@@ -133,6 +143,8 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
                     getLog().debug("system-dependent library: " + artifact);         // NOI18N
                 }
                 sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
+                // collect all the files for the win long classpath issue [issue:2335]
+                cpFiles.add(artifact.getFile());
             }
         }
 
@@ -149,9 +161,9 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
             getLog().info("created classpath: " + classpath); // NOI18N
         }
 
-        // to fix long classpath issue under win
+        // to fix long classpath issue under win [issue:2335]
         try {
-            project.getProperties().put(PROP_CIDS_CLASSPATH, createClassPathJar(classpath).getAbsolutePath());
+            project.getProperties().put(PROP_CIDS_CLASSPATH, createClassPathJar(cpFiles).getAbsolutePath());
         } catch (final IOException e) {
             if (getLog().isWarnEnabled()) {
                 getLog().warn("cannot create classpath jar, using conventional classpath", e); // NOI18N
@@ -163,17 +175,22 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
     /**
      * DOCUMENT ME!
      *
-     * @param   classpath  DOCUMENT ME!
+     * @param   cpFiles  classpath DOCUMENT ME!
      *
      * @return  DOCUMENT ME!
      *
      * @throws  IOException  DOCUMENT ME!
      */
-    private File createClassPathJar(final String classpath) throws IOException {
+    private File createClassPathJar(final List<File> cpFiles) throws IOException {
         // Generate Manifest and jar File
+        final StringBuilder sb = new StringBuilder();
+        for (final File file : cpFiles) {
+            sb.append(file.toURL().toExternalForm()).append(' ');
+        }
+
         final Manifest manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
-        manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
+        manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, sb.toString());
 
         final String jarname = "gen-classpath.jar"; // NOI18N
 
