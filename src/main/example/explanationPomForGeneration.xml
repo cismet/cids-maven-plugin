@@ -177,7 +177,6 @@
                                     <maximalHeapSize>256M</maximalHeapSize>
                                     <!-- 
                                         optional  - provide additional jvm args
-                                        relevance - only relevant for jnlp generation 
                                      -->
                                      <jvmArgs>-XX:PermSize=64m -XX:MaxPermSize=128m</jvmArgs>
                                 </java>
