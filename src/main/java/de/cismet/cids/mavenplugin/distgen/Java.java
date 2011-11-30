@@ -23,7 +23,7 @@ public final class Java {
 
     private transient String maximalHeapSize = "256m";
 
-    private transient String jvmArgs = "";
+    private transient String jvmArgs;
 
     //~ Methods ----------------------------------------------------------------
 

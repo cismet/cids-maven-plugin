@@ -150,6 +150,12 @@
                              -->
                             <starterConfiguration>
                                 <!-- 
+                                    optional  - provide custom starter title for jnlp
+                                    default   - "${additional-dep.name} Starter"
+                                    relevance - only relevant for jnlp generation 
+                                 -->
+                                <title>MyCustomStarterTitle</title>
+                                <!-- 
                                     optional  - provide specific JVM options - 
                                     relevance - only relevant for jnlp generation 
                                  -->
@@ -169,6 +175,11 @@
                                         default  - 256M
                                      -->
                                     <maximalHeapSize>256M</maximalHeapSize>
+                                    <!-- 
+                                        optional  - provide additional jvm args
+                                        relevance - only relevant for jnlp generation 
+                                     -->
+                                     <jvmArgs>-XX:PermSize=64m -XX:MaxPermSize=128m</jvmArgs>
                                 </java>
                                 <!--
                                     required - the main class of this application

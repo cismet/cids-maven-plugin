@@ -70,10 +70,12 @@
                             <artifactId>cids-custom-sudplan</artifactId>
                             <generateJar>false</generateJar>
                             <starterConfiguration>
+                                <title>Sudplan SMS</title>
                                 <java>
                                     <version>1.6</version>
                                     <initialHeapSize>512M</initialHeapSize>
                                     <maximalHeapSize>1024M</maximalHeapSize>
+                                    <jvmArgs>-XX:MaxPermSize128</jvmArgs>
                                 </java>
                                 <mainClass>Sirius.navigator.Navigator</mainClass>
                                 <arguments>
