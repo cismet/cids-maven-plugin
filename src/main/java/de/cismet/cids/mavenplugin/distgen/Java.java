@@ -23,7 +23,27 @@ public final class Java {
 
     private transient String maximalHeapSize = "256m";
 
+    private transient String jvmArgs = "";
+
     //~ Methods ----------------------------------------------------------------
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    public String getJvmArgs() {
+        return jvmArgs;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  jvmArgs  DOCUMENT ME!
+     */
+    public void setJvmArgs(final String jvmArgs) {
+        this.jvmArgs = jvmArgs;
+    }
 
     /**
      * DOCUMENT ME!
@@ -86,6 +106,7 @@ public final class Java {
         sb.append("version=").append(version);                   // NOI18N
         sb.append(", initialHeapSize=").append(initialHeapSize); // NOI18N
         sb.append(", maximalHeapSize=").append(maximalHeapSize); // NOI18N
+        sb.append(", jvmArgs=").append(jvmArgs);                 // NOI18N
         sb.append(']');
 
         return sb.toString();

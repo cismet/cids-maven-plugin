@@ -20,6 +20,8 @@ public final class StarterConfiguration {
 
     //~ Instance fields --------------------------------------------------------
 
+    private transient String title;
+
     private transient Java java = new Java();
 
     private transient String mainClass;
@@ -38,6 +40,7 @@ public final class StarterConfiguration {
     public String toString() {
         final StringBuilder sb = new StringBuilder("Starter ["); // NOI18N
 
+        sb.append("title=").append(title);                            // NOI18N
         sb.append("java=").append(java);                              // NOI18N
         sb.append(", mainClass=").append(mainClass);                  // NOI18N
         sb.append(", arguments=").append(Arrays.toString(arguments)); // NOI18N
@@ -47,6 +50,24 @@ public final class StarterConfiguration {
         sb.append(']');
 
         return sb.toString();
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    public String getTitle() {
+        return title;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  title  DOCUMENT ME!
+     */
+    public void setTitle(final String title) {
+        this.title = title;
     }
 
     /**

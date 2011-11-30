@@ -525,7 +525,11 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         // set jnlp info
-        info.setTitle(artifactProject.getName() + " Starter"); // NOI18N
+        if ((starter.getTitle() != null) && !starter.getTitle().isEmpty()) {
+            info.setTitle(starter.getTitle());
+        } else {
+            info.setTitle(artifactProject.getName() + " Starter"); // NOI18N
+        }
         if (vendor != null) {
             info.setVendor(vendor);
         }
@@ -545,6 +549,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         j2se.setVersion(java.getVersion());
         j2se.setInitialHeapSize(java.getInitialHeapSize().toLowerCase());
         j2se.setMaxHeapSize(java.getMaximalHeapSize().toLowerCase());
+        if ((java.getJvmArgs() != null) && !java.getJvmArgs().isEmpty()) {
+            j2se.setJavaVmArgs(java.getJvmArgs());
+        }
         resourceList.add(j2se);
 
         // add properties
