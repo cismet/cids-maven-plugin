@@ -423,9 +423,12 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         for (final File localJar : localJars) {
-            if (!isSigned(localJar)) {
-                signJar(localJar);
-            }
+            /* currently there is no possibility to check for a certain certificate so isSigned is kind of useless as
+             * webstart requires every jar ref within a single jnlp to be signed by the very same authority
+             */
+// if (!isSigned(localJar)) {
+            signJar(localJar);
+//            }
 
             classpath.append(localJar.getAbsolutePath()).append(' ');
         }
@@ -453,9 +456,12 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             // close the stream to be able to sign the jar
             target.close();
-            if (!isSigned(jar)) {
-                signJar(jar);
-            }
+            /* currently there is no possibility to check for a certain certificate so isSigned is kind of useless as
+             * webstart requires every jar ref within a single jnlp to be signed by the very same authority
+             */
+// if (!isSigned(jar)) {
+            signJar(jar);
+//            }
 
             if (getLog().isInfoEnabled()) {
                 getLog().info("generated starter jar: " + jar); // NOI18N
@@ -759,9 +765,12 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
 
             for (final Artifact dep : resolved) {
-                if (!isSigned(dep.getFile())) {
-                    signJar(dep.getFile());
-                }
+                /* currently there is no possibility to check for a certain certificate so isSigned is kind of useless
+                 * as webstart requires every jar ref within a single jnlp to be signed by the very same authority
+                 */
+// if (!isSigned(dep.getFile())) {
+                signJar(dep.getFile());
+//                }
                 classpath.append(dep.getFile().getAbsolutePath()).append(' ');
             }
 
@@ -779,9 +788,12 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             // close the stream to be able to sign the jar
             target.close();
-            if (!isSigned(jar)) {
-                signJar(jar);
-            }
+            /* currently there is no possibility to check for a certain certificate so isSigned is kind of useless as
+             * webstart requires every jar ref within a single jnlp to be signed by the very same authority
+             */
+// if (!isSigned(jar)) {
+            signJar(jar);
+//            }
 
             if (getLog().isInfoEnabled()) {
                 getLog().info("generated jar: " + jar); // NOI18N
