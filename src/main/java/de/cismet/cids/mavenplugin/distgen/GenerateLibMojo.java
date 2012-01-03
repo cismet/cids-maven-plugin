@@ -1272,6 +1272,10 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 }
             }
         }
+        
+        if(getLog().isWarnEnabled()){
+            getLog().warn("extended dependency configuration not found, using defaults: " + artifact); // NOI18N
+        }
 
         return new ArtifactEx(artifact);
     }
