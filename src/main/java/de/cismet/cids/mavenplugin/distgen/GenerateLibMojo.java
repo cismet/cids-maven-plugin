@@ -46,6 +46,7 @@ import java.security.cert.Certificate;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -218,6 +219,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @readonly
      */
     private transient PluginManager pluginManager;
+
+    /** Cache for the files whose signature has already been verified. */
+    private final transient Set<File> verified = new HashSet<File>(100);
 
     //~ Methods ----------------------------------------------------------------
 
@@ -891,6 +895,15 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             getLog().info("verifying signature for: " + toSign); // NOI18N
         }
 
+        // the fastest way out, avoids multiple checks on the same file
+        if (verified.contains(toSign)) {
+            if (getLog().isInfoEnabled()) {
+                getLog().info("signature verified: " + toSign); // NOI18N
+            }
+
+            return true;
+        }
+
         final String keystorePath = project.getProperties().getProperty("de.cismet.keystore.path"); // NOI18N
         final String keystorePass = project.getProperties().getProperty("de.cismet.keystore.pass"); // NOI18N
 
@@ -934,12 +947,12 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                         }
                     }
                 } else {
-                    boolean verified = false;
+                    boolean isVerified = false;
                     for (final Certificate cert : certs) {
                         if (cert.equals(cismet)) {
                             try {
                                 cert.verify(key);
-                                verified = true;
+                                isVerified = true;
 
                                 // we can get outta here
                                 break;
@@ -958,7 +971,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                         }
                     }
 
-                    if (!verified) {
+                    if (!isVerified) {
                         if (getLog().isWarnEnabled()) {
                             getLog().warn("cannot verify entry: " + entry + " | toSign: " + toSign); // NOI18N
                         }
@@ -978,6 +991,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         if (getLog().isInfoEnabled()) {
             getLog().info("signature verified: " + toSign); // NOI18N
         }
+
+        verified.add(toSign);
 
         return true;
 
