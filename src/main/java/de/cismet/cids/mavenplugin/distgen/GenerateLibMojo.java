@@ -29,13 +29,20 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import org.twdata.maven.mojoexecutor.MojoExecutor;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+
+import java.security.KeyStore;
+import java.security.PublicKey;
+import java.security.cert.Certificate;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +52,8 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
+import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
@@ -423,12 +432,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         for (final File localJar : localJars) {
-            /* currently there is no possibility to check for a certain certificate so isSigned is kind of useless as
-             * webstart requires every jar ref within a single jnlp to be signed by the very same authority
-             */
-// if (!isSigned(localJar)) {
-            signJar(localJar);
-//            }
+            if (!isSigned(localJar)) {
+                signJar(localJar);
+            }
 
             classpath.append(localJar.getAbsolutePath()).append(' ');
         }
@@ -456,12 +462,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             // close the stream to be able to sign the jar
             target.close();
-            /* currently there is no possibility to check for a certain certificate so isSigned is kind of useless as
-             * webstart requires every jar ref within a single jnlp to be signed by the very same authority
-             */
-// if (!isSigned(jar)) {
-            signJar(jar);
-//            }
+            if (!isSigned(jar)) {
+                signJar(jar);
+            }
 
             if (getLog().isInfoEnabled()) {
                 getLog().info("generated starter jar: " + jar); // NOI18N
@@ -772,12 +775,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
 
             for (final Artifact dep : resolved) {
-                /* currently there is no possibility to check for a certain certificate so isSigned is kind of useless
-                 * as webstart requires every jar ref within a single jnlp to be signed by the very same authority
-                 */
-// if (!isSigned(dep.getFile())) {
-                signJar(dep.getFile());
-//                }
+                if (!isSigned(dep.getFile())) {
+                    signJar(dep.getFile());
+                }
                 classpath.append(dep.getFile().getAbsolutePath()).append(' ');
             }
 
@@ -795,12 +795,10 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             // close the stream to be able to sign the jar
             target.close();
-            /* currently there is no possibility to check for a certain certificate so isSigned is kind of useless as
-             * webstart requires every jar ref within a single jnlp to be signed by the very same authority
-             */
-// if (!isSigned(jar)) {
-            signJar(jar);
-//            }
+
+            if (!isSigned(jar)) {
+                signJar(jar);
+            }
 
             if (getLog().isInfoEnabled()) {
                 getLog().info("generated jar: " + jar); // NOI18N
@@ -881,38 +879,138 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @param   toSign  the file to verify
      *
      * @return  true if the given file is signed, false in any other case
+     *
+     * @throws  IllegalArgumentException  DOCUMENT ME!
      */
     private boolean isSigned(final File toSign) {
-        final String groupId = MojoExecutor.groupId("org.apache.maven.plugins"); // NOI18N
-        final String artifactId = MojoExecutor.artifactId("maven-jar-plugin");   // NOI18N
-        final String version = MojoExecutor.version("2.3.2");                    // NOI18N
-        final Plugin plugin = MojoExecutor.plugin(groupId, artifactId, version);
+        if (toSign == null) {
+            throw new IllegalArgumentException("toSign file must not be null"); // NOI18N
+        }
 
-        final String goal = MojoExecutor.goal("sign-verify"); // NOI18N
+        if (getLog().isInfoEnabled()) {
+            getLog().info("verifying signature for: " + toSign); // NOI18N
+        }
 
-        final MojoExecutor.Element archive = MojoExecutor.element("jarPath", toSign.getAbsolutePath()); // NOI18N
-        // curiously the certs option of the jarsigner is less verbose than an execution without it
-        final MojoExecutor.Element certs = MojoExecutor.element("checkCerts", String.valueOf(true)); // NOI18N
+        final String keystorePath = project.getProperties().getProperty("de.cismet.keystore.path"); // NOI18N
+        final String keystorePass = project.getProperties().getProperty("de.cismet.keystore.pass"); // NOI18N
 
-        final Xpp3Dom configuration = MojoExecutor.configuration(archive, certs);
-
-        final MojoExecutor.ExecutionEnvironment environment = MojoExecutor.executionEnvironment(
-                project,
-                session,
-                pluginManager);
-
-        try {
-            MojoExecutor.executeMojo(plugin, goal, configuration, environment);
-
-            return true;
-        } catch (final Exception e) {
-            // most likely the execution failed because the signature is not present
-            if (getLog().isDebugEnabled()) {
-                getLog().debug("cannot check jar signature: " + toSign, e); // NOI18N
+        if ((keystorePass == null) || (keystorePath == null)) {
+            if (getLog().isWarnEnabled()) {
+                getLog().warn(
+                    "Cannot verify signature because either de.cismet.keystore.path or de.cismet.keystore.pass is not set"); // NOI18N
             }
 
             return false;
         }
+
+        try {
+            final JarInputStream jis = new JarInputStream(new BufferedInputStream(new FileInputStream(toSign)), true);
+            final KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+            keystore.load(new BufferedInputStream(new FileInputStream(keystorePath)), keystorePass.toCharArray());
+            final Certificate cismet = keystore.getCertificate("cismet"); // NOI18N
+            final PublicKey key = cismet.getPublicKey();
+
+            JarEntry entry;
+            while ((entry = jis.getNextJarEntry()) != null) {
+                // read from the stream to ensure the presence of the certs if any
+                final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                int byteRead;
+                while ((byteRead = jis.read()) != -1) {
+                    baos.write(byteRead);
+                }
+
+                final Certificate[] certs = entry.getCertificates();
+                if (certs == null) {
+                    if (entry.getName().endsWith(".class")) {
+                        if (getLog().isWarnEnabled()) {
+                            getLog().warn("class file not signed: " + entry + " | " + toSign); // NOI18N
+                        }
+
+                        // bail out, signature check failed
+                        return false;
+                    } else {
+                        if (getLog().isDebugEnabled()) {
+                            getLog().debug("no certs for non-class entry, skipping: " + entry); // NOI18N
+                        }
+                    }
+                } else {
+                    boolean verified = false;
+                    for (final Certificate cert : certs) {
+                        if (cert.equals(cismet)) {
+                            try {
+                                cert.verify(key);
+                                verified = true;
+
+                                // we can get outta here
+                                break;
+                            } catch (final Exception e) {
+                                if (getLog().isDebugEnabled()) {
+                                    getLog().debug("certificate of entry cannot be verified: " // NOI18N
+                                                + cert + " | entry: " + entry + " | toSign: " + toSign, // NOI18N
+                                        e);
+                                }
+                            }
+                        } else {
+                            if (getLog().isDebugEnabled()) {
+                                getLog().debug("skipping non-cismet cert: " + cert + " | entry: " + entry // NOI18N
+                                            + " | toSign: " + toSign);              // NOI18N
+                            }
+                        }
+                    }
+
+                    if (!verified) {
+                        if (getLog().isWarnEnabled()) {
+                            getLog().warn("cannot verify entry: " + entry + " | toSign: " + toSign); // NOI18N
+                        }
+
+                        return false;
+                    }
+                }
+            }
+        } catch (final Exception e) {
+            if (getLog().isWarnEnabled()) {
+                getLog().warn("cannot verify signature: " + toSign, e); // NOI18N
+            }
+
+            return false;
+        }
+
+        if (getLog().isInfoEnabled()) {
+            getLog().info("signature verified: " + toSign); // NOI18N
+        }
+
+        return true;
+
+//        final String groupId = MojoExecutor.groupId("org.apache.maven.plugins"); // NOI18N
+//        final String artifactId = MojoExecutor.artifactId("maven-jar-plugin");   // NOI18N
+//        final String version = MojoExecutor.version("2.3.2");                    // NOI18N
+//        final Plugin plugin = MojoExecutor.plugin(groupId, artifactId, version);
+//
+//        final String goal = MojoExecutor.goal("sign-verify"); // NOI18N
+//
+//        final MojoExecutor.Element archive = MojoExecutor.element("jarPath", toSign.getAbsolutePath()); // NOI18N
+//        // curiously the certs option of the jarsigner is less verbose than an execution without it
+//        final MojoExecutor.Element certs = MojoExecutor.element("checkCerts", String.valueOf(true)); // NOI18N
+//
+//        final Xpp3Dom configuration = MojoExecutor.configuration(archive, certs);
+//
+//        final MojoExecutor.ExecutionEnvironment environment = MojoExecutor.executionEnvironment(
+//                project,
+//                session,
+//                pluginManager);
+//
+//        try {
+//            MojoExecutor.executeMojo(plugin, goal, configuration, environment);
+//
+//            return true;
+//        } catch (final Exception e) {
+//            // most likely the execution failed because the signature is not present
+//            if (getLog().isDebugEnabled()) {
+//                getLog().debug("cannot check jar signature: " + toSign, e); // NOI18N
+//            }
+//
+//            return false;
+//        }
     }
 
     /**
