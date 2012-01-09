@@ -877,14 +877,17 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     }
 
     /**
-     * We have to use the (deprecated) maven jar plugin to verify the signature because the jarsigner plugin does not
-     * support the errorWhenNotSigned option. Maybe some later version... http://jira.codehaus.org/browse/MJARSIGNER-18
+     * No longer uses the maven jar plugin sign-verify implementation to check for validity of a signature because the
+     * plugin does not support checking for a particular signature. This implementation checks every single class or the
+     * given jar, but classes only, no other resources. It validates whether all classes have been signed with the
+     * cismet signature, defined via the <code>de.cismet.keystore.path</code> and <code>de.cismet.keystore.pass</code>
+     * properties.
      *
-     * @param   toSign  the file to verify
+     * @param   toSign  the jar file to verify
      *
-     * @return  true if the given file is signed, false in any other case
+     * @return  true if all class files of the given jar are signed with the cismet signature, false in any other case
      *
-     * @throws  IllegalArgumentException  DOCUMENT ME!
+     * @throws  IllegalArgumentException  if the given file is <code>null</code>
      */
     private boolean isSigned(final File toSign) {
         if (toSign == null) {
@@ -995,37 +998,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         verified.add(toSign);
 
         return true;
-
-//        final String groupId = MojoExecutor.groupId("org.apache.maven.plugins"); // NOI18N
-//        final String artifactId = MojoExecutor.artifactId("maven-jar-plugin");   // NOI18N
-//        final String version = MojoExecutor.version("2.3.2");                    // NOI18N
-//        final Plugin plugin = MojoExecutor.plugin(groupId, artifactId, version);
-//
-//        final String goal = MojoExecutor.goal("sign-verify"); // NOI18N
-//
-//        final MojoExecutor.Element archive = MojoExecutor.element("jarPath", toSign.getAbsolutePath()); // NOI18N
-//        // curiously the certs option of the jarsigner is less verbose than an execution without it
-//        final MojoExecutor.Element certs = MojoExecutor.element("checkCerts", String.valueOf(true)); // NOI18N
-//
-//        final Xpp3Dom configuration = MojoExecutor.configuration(archive, certs);
-//
-//        final MojoExecutor.ExecutionEnvironment environment = MojoExecutor.executionEnvironment(
-//                project,
-//                session,
-//                pluginManager);
-//
-//        try {
-//            MojoExecutor.executeMojo(plugin, goal, configuration, environment);
-//
-//            return true;
-//        } catch (final Exception e) {
-//            // most likely the execution failed because the signature is not present
-//            if (getLog().isDebugEnabled()) {
-//                getLog().debug("cannot check jar signature: " + toSign, e); // NOI18N
-//            }
-//
-//            return false;
-//        }
     }
 
     /**
@@ -1272,8 +1244,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 }
             }
         }
-        
-        if(getLog().isWarnEnabled()){
+
+        if (getLog().isWarnEnabled()) {
             getLog().warn("extended dependency configuration not found, using defaults: " + artifact); // NOI18N
         }
 
