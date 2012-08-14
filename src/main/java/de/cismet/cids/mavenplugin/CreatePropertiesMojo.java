@@ -163,7 +163,9 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
 
         // to fix long classpath issue under win [issue:2335]
         try {
-            project.getProperties().put(PROP_CIDS_CLASSPATH, createClassPathJar(cpFiles).getAbsolutePath());
+            final String classpathJar = createClassPathJar(cpFiles).getAbsolutePath();
+            project.getProperties()
+                    .put(PROP_CIDS_CLASSPATH, classpathJar.replace(File.separator, File.separator + File.separator));
         } catch (final IOException e) {
             if (getLog().isWarnEnabled()) {
                 getLog().warn("cannot create classpath jar, using conventional classpath", e); // NOI18N
