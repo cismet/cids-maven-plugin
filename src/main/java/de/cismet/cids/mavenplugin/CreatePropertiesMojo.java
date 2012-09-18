@@ -167,8 +167,8 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
 
             // The path may contain backslashes as file separator. Reading this property later in the build process
             // results in losing all backslashes: C:\java\And\Backslash turns to C:javaAndBackslash
-            if(File.separatorChar == '\\') {
-                classpathJar = createClassPathJar(cpFiles).getAbsolutePath().replace("\\", "\\\\");
+            if (File.separatorChar == '\\') {
+                classpathJar = createClassPathJar(cpFiles).getAbsolutePath().replace("\\", "\\\\"); // NOI18N
             } else {
                 classpathJar = createClassPathJar(cpFiles).getAbsolutePath();
             }
