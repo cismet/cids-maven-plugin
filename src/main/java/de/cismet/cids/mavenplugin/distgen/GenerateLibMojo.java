@@ -369,8 +369,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             throw new MojoFailureException("starter configuration needs main class definition"); // NOI18N
         }
 
-        final StringBuilder classpath = new StringBuilder();
-
         final LocalConfiguration localConfiguration = starter.getLocalConfiguration();
         final File localDir;
         try {
@@ -435,18 +433,20 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                         + sb.toString());
         }
 
+        final StringBuilder classpath = new StringBuilder();
+
         for (final File localJar : localJars) {
             if (!isSigned(localJar)) {
                 signJar(localJar);
             }
 
-            classpath.append(localJar.getAbsolutePath()).append(' ');
+            classpath.append(getManifestCompatiblePath(localJar.getAbsolutePath())).append(' ');
         }
 
         if (artifactEx.getExtendedClassPathJar() == null) {
-            classpath.append(artifactEx.getClassPathJar().getAbsolutePath());
+            classpath.append(getManifestCompatiblePath(artifactEx.getClassPathJar().getAbsolutePath()));
         } else {
-            classpath.append(artifactEx.getExtendedClassPathJar().getAbsolutePath());
+            classpath.append(getManifestCompatiblePath(artifactEx.getExtendedClassPathJar().getAbsolutePath()));
         }
 
         // Generate Manifest and jar File
@@ -733,6 +733,23 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     }
 
     /**
+     * Prepends a {@link File#separator} to the given absolute path to solve issue #3
+     * {@linkplain https://github.com/cismet/cids-maven-plugin/issues/3}. Be sure to call only with an absolute path
+     * string as relative paths will be turned absolute.
+     *
+     * @param   absolutePath  the path to convert to a manifest compatible path
+     *
+     * @return  the given absolute path with a leading <code>File.separator</code>
+     */
+    private String getManifestCompatiblePath(final String absolutePath) {
+        if (absolutePath == null) {
+            return null;
+        }
+
+        return absolutePath.startsWith(File.separator) ? absolutePath : (File.separator + absolutePath);
+    }
+
+    /**
      * DOCUMENT ME!
      *
      * @param   parent  DOCUMENT ME!
@@ -757,7 +774,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         if (virtual) {
             classpath = new StringBuilder();
         } else {
-            classpath = new StringBuilder(parentArtifact.getFile().getAbsolutePath());
+            classpath = new StringBuilder(getManifestCompatiblePath(parentArtifact.getFile().getAbsolutePath()));
             classpath.append(' ');
         }
 
@@ -766,7 +783,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             filter = new ScopeArtifactFilter(Artifact.SCOPE_RUNTIME);
         } else {
             filter = new ChildDependencyFilter(child);
-            classpath.append(child.getClassPathJar().getAbsolutePath()).append(' ');
+            classpath.append(getManifestCompatiblePath(child.getClassPathJar().getAbsolutePath())).append(' ');
         }
 
         JarOutputStream target = null;
@@ -782,7 +799,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 if (!isSigned(dep.getFile())) {
                     signJar(dep.getFile());
                 }
-                classpath.append(dep.getFile().getAbsolutePath()).append(' ');
+                classpath.append(getManifestCompatiblePath(dep.getFile().getAbsolutePath())).append(' ');
             }
 
             // Generate Manifest and jar File
