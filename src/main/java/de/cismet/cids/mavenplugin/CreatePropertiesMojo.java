@@ -163,7 +163,17 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
 
         // to fix long classpath issue under win [issue:2335]
         try {
-            project.getProperties().put(PROP_CIDS_CLASSPATH, createClassPathJar(cpFiles).getAbsolutePath());
+            final String classpathJar;
+
+            // The path may contain backslashes as file separator. Reading this property later in the build process
+            // results in losing all backslashes: C:\java\And\Backslash turns to C:javaAndBackslash
+            if (File.separatorChar == '\\') {
+                classpathJar = createClassPathJar(cpFiles).getAbsolutePath().replace("\\", "\\\\"); // NOI18N
+            } else {
+                classpathJar = createClassPathJar(cpFiles).getAbsolutePath();
+            }
+
+            project.getProperties().put(PROP_CIDS_CLASSPATH, classpathJar);
         } catch (final IOException e) {
             if (getLog().isWarnEnabled()) {
                 getLog().warn("cannot create classpath jar, using conventional classpath", e); // NOI18N
