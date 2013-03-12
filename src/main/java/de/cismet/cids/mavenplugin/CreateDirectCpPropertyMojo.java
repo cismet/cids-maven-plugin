@@ -50,9 +50,16 @@ public final class CreateDirectCpPropertyMojo extends AbstractMojo {
      * Whether to skip the execution of this mojo.
      *
      * @parameter  expression="${de.cismet.cids.create-direct-cp-property.skip}" default-value="false"
-     * @required   false
+     * @required
      */
     private transient Boolean skip;
+    /**
+     * Whether to include system scope dependencies.
+     *
+     * @parameter  expression="${de.cismet.cids.create-direct-cp-property.includeSystemScope}" default-value="false"
+     * @required
+     */
+    private transient Boolean includeSystemScope;
 
     //~ Methods ----------------------------------------------------------------
 
@@ -71,7 +78,7 @@ public final class CreateDirectCpPropertyMojo extends AbstractMojo {
 
         final StringBuilder directCpProp = new StringBuilder();
         for (final Artifact a : directDeps) {
-            if ("compile".equals(a.getScope())) { // NOI18N
+            if ("compile".equals(a.getScope()) || (includeSystemScope && "system".equals(a.getScope()))) { // NOI18N
                 directCpProp.append(a.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
             }
         }
