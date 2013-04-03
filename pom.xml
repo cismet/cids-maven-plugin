@@ -15,6 +15,13 @@
 
     <name>cids maven2 plugin</name>
     <description>Simple maven2 plugin that helps with several cids related maven actions</description>
+    <licenses>
+        <license>
+            <name>GNU Lesser General Public License</name>
+            <distribution>repo</distribution>
+            <url>http://www.gnu.org/licenses/lgpl-3.0.html</url>
+        </license>
+    </licenses>
 
     <prerequisites>
         <maven>3</maven>
