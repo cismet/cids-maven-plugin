@@ -16,6 +16,7 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
+import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.PluginManager;
@@ -218,7 +219,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @required
      * @readonly
      */
-    private transient PluginManager pluginManager;
+    private transient BuildPluginManager pluginManager;
 
     /** Cache for the files whose signature has already been verified. */
     private final transient Set<File> verified = new HashSet<File>(100);
@@ -881,7 +882,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 pluginManager);
 
         if (getLog().isInfoEnabled()) {
-            getLog().info("Signing jar: " + toSign);
+            getLog().info("Signing jar: " + toSign); // NOI18N
         }
 
         try {
