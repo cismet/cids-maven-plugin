@@ -33,6 +33,10 @@
         <url>https://github.com/cismet/cids-maven-plugin</url>
     </scm>
 
+    <properties>
+        <maven.version>3.0.5</maven.version>
+    </properties>
+
     <repositories>
         <repository>
             <id>cismet-repo</id>
@@ -70,12 +74,27 @@
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-plugin-api</artifactId>
-            <version>3.0.5</version>
+            <version>${maven.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
-            <artifactId>maven-project</artifactId>
-            <version>3.0-alpha-2</version>
+            <artifactId>maven-compat</artifactId>
+            <version>${maven.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-artifact</artifactId>
+            <version>${maven.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+            <version>${maven.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-model</artifactId>
+            <version>${maven.version}</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
@@ -88,11 +107,6 @@
             <version>3.0.10</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-jarsigner-plugin</artifactId>
-            <version>1.2</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.maven.shared</groupId>
             <artifactId>maven-dependency-tree</artifactId>
             <version>2.0</version>
@@ -101,11 +115,6 @@
             <groupId>org.twdata.maven</groupId>
             <artifactId>mojo-executor</artifactId>
             <version>2.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-client</artifactId>
-            <version>1.2</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.plugin-testing</groupId>
@@ -179,6 +188,45 @@
                     </sources>
                 </configuration>
             </plugin>
+            <!-- DDD: self-ref to be able to adopt and maintain direct dependency declaration -->
+            <plugin>
+                <groupId>de.cismet.cids</groupId>
+                <artifactId>cids-maven-plugin</artifactId>
+                <version>2.0-preview-2</version>
+                <executions>
+                    <execution>
+                        <id>create-compile-classpath</id>
+                        <goals>
+                            <goal>create-direct-cp-property</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>direct-compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <compilerArguments>
+                                <sourcepath>${basedir}/src/main/java</sourcepath>
+                                <classpath>${classpath.directDependencies}</classpath>
+                            </compilerArguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- DDD end -->
             <!-- move to profile -->
             <plugin>
                 <groupId>triemax</groupId>
