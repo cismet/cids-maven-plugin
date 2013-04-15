@@ -32,6 +32,22 @@
         <developerConnection>scm:git:git@github.com:cismet/cids-maven-plugin.git</developerConnection>
         <url>https://github.com/cismet/cids-maven-plugin</url>
     </scm>
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/cismet/cids-maven-plugin/issues/</url>
+    </issueManagement>
+    <distributionManagement>
+        <repository>
+            <id>cismet-repo</id>
+            <name>plugins-releases-local</name>
+            <url>https://repo.cismet.de/plugins-releases-local</url>
+        </repository>
+        <snapshotRepository>
+            <id>cismet-repo</id>
+            <name>plugins-snapshots-local</name>
+            <url>https://repo.cismet.de/plugins-snapshots-local</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <properties>
         <maven.version>3.0.5</maven.version>
