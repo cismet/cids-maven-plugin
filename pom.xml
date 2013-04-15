@@ -243,18 +243,30 @@
                 </executions>
             </plugin>
             <!-- DDD end -->
-            <!-- move to profile -->
-            <plugin>
-                <groupId>triemax</groupId>
-                <artifactId>jalopy-maven</artifactId>
-                <version>1.9.4-126</version>
-                <configuration>
-                    <excludes>
-                        <exclude>**/xjc/**</exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
+    
+    <profiles>
+        <profile>
+            <id>cismet-dev</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>triemax</groupId>
+                        <artifactId>jalopy-maven</artifactId>
+                        <version>1.9.4-126</version>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/xjc/**</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
 
