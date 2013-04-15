@@ -19,7 +19,6 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.shared.dependency.tree.DependencyNode;
@@ -244,6 +243,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         // get all direct artifacts of the project and scan through the dependency configuration if there is some
         // additional requirement to the dependency artifacts
+        // api is 1.4 style, no way to get rid of this warning some other way except using instanceof + cast
+        @SuppressWarnings("unchecked")
         final Set<Artifact> dependencies = project.getDependencyArtifacts();
         final Set<ArtifactEx> accepted = new LinkedHashSet<ArtifactEx>(dependencies.size());
         for (final Artifact artifact : dependencies) {
@@ -405,7 +406,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         if (localConfiguration.getJarNames() == null) {
             localFileNames = null;
         } else {
-            localFileNames = new ArrayList(Arrays.asList(localConfiguration.getJarNames()));
+            localFileNames = new ArrayList<String>(Arrays.asList(localConfiguration.getJarNames()));
         }
 
         final File[] localJars = localDir.listFiles(new FileFilter() {
@@ -549,7 +550,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         jnlp.getInformation().add(info);
 
         final Resources resources = objectFactory.createResources();
-        final List resourceList = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
+        final List<Object> resourceList = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
 
         // set java properties
         final Java java = starter.getJava();
@@ -1044,7 +1045,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final Information info = objectFactory.createInformation();
 
         final Resources resources = objectFactory.createResources();
-        final List jars = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
+        final List<Object> jars = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
 
         final MavenProject artifactProject;
         if (virtual) {

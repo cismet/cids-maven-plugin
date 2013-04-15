@@ -74,6 +74,8 @@ public final class CreateDirectCpPropertyMojo extends AbstractMojo {
 
             return;
         }
+        // api is 1.4 style, no way to get rid of this warning some other way except using instanceof + cast
+        @SuppressWarnings("unchecked")
         final Set<Artifact> directDeps = project.getDependencyArtifacts();
 
         final StringBuilder directCpProp = new StringBuilder();

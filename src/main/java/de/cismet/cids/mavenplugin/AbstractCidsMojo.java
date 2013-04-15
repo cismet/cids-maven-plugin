@@ -67,7 +67,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @required   true
      * @readonly   true
      */
-    protected transient List remoteRepos;
+    protected transient List<ArtifactRepository> remoteRepos;
 
     /**
      * The enclosing maven project.
@@ -183,7 +183,9 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
         ArtifactResolutionException,
         ArtifactNotFoundException {
         // resolve all artifacts from the project
-        final Set runtimeArtifacts = artifactProject.createArtifacts(factory, scope, filter);
+        // api is 1.4 style, no way to get rid of this warning some other way except using instanceof + cast
+        @SuppressWarnings("unchecked")
+        final Set<Artifact> runtimeArtifacts = artifactProject.createArtifacts(factory, scope, filter);
         if (getLog().isDebugEnabled()) {
             getLog().debug("runtime artifacts of project '" + artifactProject + "': " + runtimeArtifacts); // NOI18N
         }

@@ -123,7 +123,13 @@
 
     <build>
         <plugins>
-            <!-- mscholl: tests are currently not working, have to find out why -->
+            <!-- 
+                mscholl: the testing-harness seems to be totally broken for quite some time now, no info whether it will
+                ever work again, maybe we have to consider other testing methods
+                http://stackoverflow.com/questions/15779351/component-lookup-exception-with-org-apache-maven-repository-repositorysystem-in
+                http://stackoverflow.com/questions/14939341/error-injecting-defaultrepositorysystem-in-maven-plugin-testing-harness
+                http://jira.codehaus.org/browse/MPLUGINTESTING-25
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
