@@ -10,7 +10,6 @@ package de.cismet.cids.mavenplugin;
 import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
-import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
@@ -111,15 +110,6 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @readonly   true
      */
     protected transient MavenProject project;
-
-    /**
-     * ArtifactMetadataSource used to resolve artifacts.
-     *
-     * @component  role="org.apache.maven.artifact.metadata.ArtifactMetadataSource"
-     * @required   DOCUMENT ME!
-     * @readonly   DOCUMENT ME!
-     */
-    protected transient ArtifactMetadataSource artifactMetadataSource;
 
     /**
      * The entry point to Aether, i.e. the component doing all the work.
