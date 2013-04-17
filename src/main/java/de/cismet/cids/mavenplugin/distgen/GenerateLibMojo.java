@@ -7,7 +7,9 @@
 ****************************************************/
 package de.cismet.cids.mavenplugin.distgen;
 
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactCollector;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
@@ -21,11 +23,14 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingException;
-import org.apache.maven.shared.dependency.tree.DependencyNode;
 import org.apache.maven.shared.dependency.tree.DependencyTreeBuilder;
-import org.apache.maven.shared.dependency.tree.DependencyTreeBuilderException;
 
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+
+import org.sonatype.aether.collection.CollectRequest;
+import org.sonatype.aether.collection.CollectResult;
+import org.sonatype.aether.collection.DependencyCollectionException;
+import org.sonatype.aether.graph.DependencyNode;
 
 import org.twdata.maven.mojoexecutor.MojoExecutor;
 
@@ -666,11 +671,15 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final Model model = createModel(artifactEx);
             final MavenProject extProject = new MavenProject(model);
 
-            extProject.setArtifact(factory.createBuildArtifact(
+            // a build artifact similar to DefaultArtifactFactory.createBuildArtifact (deprecated)
+            extProject.setArtifact(new DefaultArtifact(
                     extProject.getGroupId(),
                     extProject.getArtifactId(),
                     extProject.getVersion(),
-                    extProject.getPackaging()));
+                    Artifact.SCOPE_RUNTIME,
+                    extProject.getPackaging(),
+                    null,
+                    artifactHandlerManager.getArtifactHandler(extProject.getPackaging())));
 
             extParent = new ArtifactEx(extProject.getArtifact());
             extParent.setVirtualProject(extProject);
@@ -1187,13 +1196,17 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         for (final ArtifactEx artifactEx : artifacts) {
             try {
                 final MavenProject artifactProject = resolveProject(artifactEx.getArtifact());
-                final DependencyNode root = dependencyTreeBuilder.buildDependencyTree(
-                        artifactProject,
-                        localRepository,
-                        factory,
-                        artifactMetadataSource,
-                        new ScopeArtifactFilter(Artifact.SCOPE_RUNTIME),
-                        artifactCollector);
+
+                final org.sonatype.aether.artifact.Artifact aetherArtifact = RepositoryUtils.toArtifact(
+                        artifactProject.getArtifact());
+                final CollectRequest collectRequest = new CollectRequest();
+                collectRequest.setRoot(new org.sonatype.aether.graph.Dependency(aetherArtifact, ""));
+                collectRequest.setRepositories(projectRepos);
+
+                final CollectResult collectResult = repoSystem.collectDependencies(repoSession, collectRequest);
+
+                final DependencyNode root = collectResult.getRoot();
+
                 artifactEx.setDependencyTreeRoot(root);
 
                 int insertionIndex = 0;
@@ -1213,7 +1226,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 getLog().error(message, ex);
 
                 throw new MojoExecutionException(message, ex);
-            } catch (final DependencyTreeBuilderException ex) {
+            } catch (final DependencyCollectionException ex) {
                 final String message = "cannot build dependency tree for artifact: " + artifactEx.getArtifact(); // NOI18N
                 getLog().error(message, ex);
 
@@ -1236,8 +1249,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         // DFS
         for (final Object o : current.getChildren()) {
             final DependencyNode child = (DependencyNode)o;
+            final Artifact artifact = RepositoryUtils.toArtifact(child.getDependency().getArtifact());
 
-            if (child.getArtifact().equals(toCheck)) {
+            if (artifact.equals(toCheck)) {
                 return true;
             } else if (isChildOf(child, toCheck)) {
                 return true;

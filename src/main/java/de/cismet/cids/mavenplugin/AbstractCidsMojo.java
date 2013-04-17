@@ -9,11 +9,9 @@ package de.cismet.cids.mavenplugin;
 
 import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
-import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
@@ -26,7 +24,6 @@ import org.apache.maven.project.ProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.project.ProjectBuildingResult;
-import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 
 import org.codehaus.plexus.util.FileUtils;
 
@@ -78,6 +75,15 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @component  DOCUMENT ME!
      */
     protected transient ArtifactResolver resolver;
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @component  role="org.apache.maven.artifact.handler.manager.ArtifactHandlerManager"
+     * @required
+     * @readonly
+     */
+    protected transient ArtifactHandlerManager artifactHandlerManager;
 
     /**
      * Location of the local repository.
@@ -141,13 +147,6 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     protected transient ProjectBuilder projectBuilder;
 
     /**
-     * Used to look up Artifacts in the remote repository.
-     *
-     * @component  DOCUMENT ME!
-     */
-    protected transient ArtifactFactory factory;
-
-    /**
      * Whether to skip the execution of this mojo.
      *
      * @parameter  expression="${refsystem.reset.skip}" default-value="true"
@@ -162,7 +161,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @parameter  default-value="${project.remoteProjectRepositories}"
      * @readonly
      */
-    private List<RemoteRepository> projectRepos;
+    protected transient List<RemoteRepository> projectRepos;
 
     //~ Methods ----------------------------------------------------------------
 
@@ -175,16 +174,21 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given artifact
      *
-     * @throws  ProjectBuildingException           if no maven project can be build from the artifact information
-     * @throws  InvalidDependencyVersionException  if the artifacts cannot be created from the created maven project
-     * @throws  ArtifactResolutionException        if an artifact of the given artifact cannot be resolved
-     * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
+     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  InvalidDependencyVersionException if the
+     *                                                                        artifacts cannot be created from the
+     *                                                                        created maven project
+     * @throws  InstallationException                                         if an artifact of the given artifact
+     *                                                                        cannot be resolved
+     * @throws  IOException                                                   ArtifactNotFoundException if an artifact
+     *                                                                        of the given artifact cannot be found
+     * @throws  ProjectBuildingException                                      if no maven project can be build from the
+     *                                                                        artifact information
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope)
-           throws org.sonatype.aether.resolution.DependencyResolutionException,
-        InstallationException,
-        IOException,
-        ProjectBuildingException  {
+            throws org.sonatype.aether.resolution.DependencyResolutionException,
+                InstallationException,
+                IOException,
+                ProjectBuildingException {
         return resolveArtifacts(artifact, scope, new ScopeArtifactFilter(scope));
     }
 
@@ -197,18 +201,24 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given artifact
      *
-     * @throws  ProjectBuildingException           if no maven project can be build from the artifact information
-     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for the given project for any reason
-     * @throws  InstallationException                                         if a temporary artifact cannot be installed when dealing with virtual artifacts
-     * @throws  IOException                                                   if a temporary pom cannot be written when dealing with virtual artifacts
-     * 
-     * @see #resolveArtifacts(org.apache.maven.project.MavenProject, java.lang.String, org.apache.maven.artifact.resolver.filter.ArtifactFilter) 
+     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
+     *                                                                        the given project for any reason
+     * @throws  InstallationException                                         if a temporary artifact cannot be
+     *                                                                        installed when dealing with virtual
+     *                                                                        artifacts
+     * @throws  IOException                                                   if a temporary pom cannot be written when
+     *                                                                        dealing with virtual artifacts
+     * @throws  ProjectBuildingException                                      if no maven project can be build from the
+     *                                                                        artifact information
+     *
+     * @see     #resolveArtifacts(org.apache.maven.project.MavenProject, java.lang.String,
+     *          org.apache.maven.artifact.resolver.filter.ArtifactFilter)
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope, final ArtifactFilter filter)
-             throws org.sonatype.aether.resolution.DependencyResolutionException,
-        InstallationException,
-        IOException,
-        ProjectBuildingException {
+            throws org.sonatype.aether.resolution.DependencyResolutionException,
+                InstallationException,
+                IOException,
+                ProjectBuildingException {
         // create a maven project from the pom
         final MavenProject pomProject = resolveProject(artifact);
         if (getLog().isDebugEnabled()) {
@@ -227,9 +237,13 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given project
      *
-     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for the given project for any reason
-     * @throws  InstallationException                                         if a temporary artifact cannot be installed when dealing with virtual artifacts
-     * @throws  IOException                                                   if a temporary pom cannot be written when dealing with virtual artifacts
+     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
+     *                                                                        the given project for any reason
+     * @throws  InstallationException                                         if a temporary artifact cannot be
+     *                                                                        installed when dealing with virtual
+     *                                                                        artifacts
+     * @throws  IOException                                                   if a temporary pom cannot be written when
+     *                                                                        dealing with virtual artifacts
      */
     protected Set<Artifact> resolveArtifacts(final MavenProject artifactProject,
             final String scope,
@@ -343,12 +357,14 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      */
     protected MavenProject resolveProject(final Artifact artifact) throws ProjectBuildingException {
         // create a pom artifact from the given artifact information
-        final Artifact pom = factory.createArtifact(
+        final Artifact pom = new org.apache.maven.artifact.DefaultArtifact(
                 artifact.getGroupId(),
                 artifact.getArtifactId(),
                 artifact.getVersion(),
+                Artifact.SCOPE_RUNTIME,
+                "pom", // NOI18N
                 "", // NOI18N
-                "pom"); // NOI18N
+                artifactHandlerManager.getArtifactHandler("pom")); // NOI18N
         if (getLog().isDebugEnabled()) {
             getLog().debug("created pom artifact from artifact '" + artifact + "': " + pom); // NOI18N
         }

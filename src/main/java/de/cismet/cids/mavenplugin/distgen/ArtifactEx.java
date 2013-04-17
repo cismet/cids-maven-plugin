@@ -9,7 +9,8 @@ package de.cismet.cids.mavenplugin.distgen;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.shared.dependency.tree.DependencyNode;
+
+import org.sonatype.aether.graph.DependencyNode;
 
 import java.io.File;
 
