@@ -118,6 +118,32 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     private transient Boolean skip;
 
     /**
+     * Whether to sign artifacts used to create the distribution.
+     *
+     * @parameter  expression="${cids.generate-lib.sign}" default-value="true"
+     * @required   false
+     */
+    private transient Boolean sign;
+
+    /**
+     * Whether to check artifacts if they are signed or not. If checkSignature is <code>false</code> and sign is <code>
+     * true</code> jars will be signed regardless of they current signature. if both checkSignature and sign are <code>
+     * true</code> jars will only be signed if they have not been signed with the set certificate before.
+     *
+     * @parameter  expression="${cids.generate-lib.checkSignature}" default-value="true"
+     * @required   false
+     */
+    private transient Boolean checkSignature;
+
+    /**
+     * Controls whether specific messages are presented to the user or not.
+     *
+     * @parameter  expression="${cids.generate-lib.verbose}" default-value="false"
+     * @required   false
+     */
+    private transient Boolean verbose;
+
+    /**
      * The directory where the lib directory shall be created in. It is most likely the cids Distribution directory and
      * most likely the directory that is hosted via the <code>codebase</code> parameter, too.<br/>
      * <br/>
@@ -858,9 +884,30 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * DOCUMENT ME!
      *
-     * @param  toSign  DOCUMENT ME!
+     * @param   toSign  DOCUMENT ME!
+     *
+     * @throws  IllegalArgumentException  DOCUMENT ME!
      */
     private void signJar(final File toSign) {
+        if (toSign == null) {
+            throw new IllegalArgumentException("toSign must not be null"); // NOI18N
+        }
+
+        if (!sign) {
+            final String message = "not signing jar because sign is false"; // NOI18N
+            if (verbose) {
+                if (getLog().isInfoEnabled()) {
+                    getLog().info(message);
+                }
+            } else {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(message);
+                }
+            }
+
+            return;
+        }
+
         final String groupId = MojoExecutor.groupId("org.apache.maven.plugins");     // NOI18N
         final String artifactId = MojoExecutor.artifactId("maven-jarsigner-plugin"); // NOI18N
         final String version = MojoExecutor.version("1.2");                          // NOI18N
@@ -913,13 +960,29 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      *
      * @param   toSign  the jar file to verify
      *
-     * @return  true if all class files of the given jar are signed with the cismet signature, false in any other case
+     * @return  true if checkSignature is true and all class files of the given jar are signed with the cismet
+     *          signature, false in any other case
      *
      * @throws  IllegalArgumentException  if the given file is <code>null</code>
      */
     private boolean isSigned(final File toSign) {
         if (toSign == null) {
             throw new IllegalArgumentException("toSign file must not be null"); // NOI18N
+        }
+
+        if (!checkSignature) {
+            final String message = "not verifying signature because checkSignature is false"; // NOI18N
+            if (verbose) {
+                if (getLog().isInfoEnabled()) {
+                    getLog().info(message);
+                }
+            } else {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(message);
+                }
+            }
+
+            return false;
         }
 
         if (getLog().isInfoEnabled()) {
