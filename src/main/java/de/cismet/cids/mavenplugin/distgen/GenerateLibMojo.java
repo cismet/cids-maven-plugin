@@ -792,7 +792,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         try {
             final Set<Artifact> resolved;
             if (virtual) {
-                resolved = resolveArtifactsAether(parent.getVirtualProject(), Artifact.SCOPE_RUNTIME, filter);
+                resolved = resolveArtifacts(parent.getVirtualProject(), Artifact.SCOPE_RUNTIME, filter);
             } else {
                 resolved = resolveArtifacts(parentArtifact, Artifact.SCOPE_RUNTIME, filter);
             }

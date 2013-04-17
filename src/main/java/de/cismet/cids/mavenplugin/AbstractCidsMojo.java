@@ -14,7 +14,6 @@ import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
-import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
@@ -182,10 +181,10 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope)
-            throws ProjectBuildingException,
-                InvalidDependencyVersionException,
-                ArtifactResolutionException,
-                ArtifactNotFoundException {
+           throws org.sonatype.aether.resolution.DependencyResolutionException,
+        InstallationException,
+        IOException,
+        ProjectBuildingException  {
         return resolveArtifacts(artifact, scope, new ScopeArtifactFilter(scope));
     }
 
@@ -199,15 +198,17 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @return  all the dependencies artifacts of the given artifact
      *
      * @throws  ProjectBuildingException           if no maven project can be build from the artifact information
-     * @throws  InvalidDependencyVersionException  if the artifacts cannot be created from the created maven project
-     * @throws  ArtifactResolutionException        if an artifact of the given artifact cannot be resolved
-     * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
+     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for the given project for any reason
+     * @throws  InstallationException                                         if a temporary artifact cannot be installed when dealing with virtual artifacts
+     * @throws  IOException                                                   if a temporary pom cannot be written when dealing with virtual artifacts
+     * 
+     * @see #resolveArtifacts(org.apache.maven.project.MavenProject, java.lang.String, org.apache.maven.artifact.resolver.filter.ArtifactFilter) 
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope, final ArtifactFilter filter)
-            throws ProjectBuildingException,
-                InvalidDependencyVersionException,
-                ArtifactResolutionException,
-                ArtifactNotFoundException {
+             throws org.sonatype.aether.resolution.DependencyResolutionException,
+        InstallationException,
+        IOException,
+        ProjectBuildingException {
         // create a maven project from the pom
         final MavenProject pomProject = resolveProject(artifact);
         if (getLog().isDebugEnabled()) {
@@ -226,47 +227,11 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given project
      *
-     * @throws  InvalidDependencyVersionException  if the artifacts cannot be created from the created maven project
-     * @throws  ArtifactResolutionException        if an artifact of the given artifact cannot be resolved
-     * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
+     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for the given project for any reason
+     * @throws  InstallationException                                         if a temporary artifact cannot be installed when dealing with virtual artifacts
+     * @throws  IOException                                                   if a temporary pom cannot be written when dealing with virtual artifacts
      */
     protected Set<Artifact> resolveArtifacts(final MavenProject artifactProject,
-            final String scope,
-            final ArtifactFilter filter) throws InvalidDependencyVersionException,
-        ArtifactResolutionException,
-        ArtifactNotFoundException {
-        // resolve all artifacts from the project
-        // api is 1.4 style, no way to get rid of this warning some other way except using instanceof + cast
-        @SuppressWarnings("unchecked")
-        final Set<Artifact> runtimeArtifacts = artifactProject.createArtifacts(factory, scope, filter);
-        if (getLog().isDebugEnabled()) {
-            getLog().debug("runtime artifacts of project '" + artifactProject + "': " + runtimeArtifacts); // NOI18N
-        }
-
-        final ArtifactResolutionResult result = resolver.resolveTransitively(
-                runtimeArtifacts,
-                artifactProject.getArtifact(),
-                remoteRepos,
-                local,
-                artifactMetadataSource);
-
-        return result.getArtifacts();
-    }
-
-    /**
-     * Resolves the dependencies of the given project with the given scope and the given filter.
-     *
-     * @param   artifactProject  the project who's dependencies shall be resolved
-     * @param   scope            the scope applied to the resolve process
-     * @param   filter           the <code>ArtifactFilter</code> to apply
-     *
-     * @return  all the dependencies artifacts of the given project
-     *
-     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  DOCUMENT ME!
-     * @throws  InstallationException                                         DOCUMENT ME!
-     * @throws  IOException                                                   DOCUMENT ME!
-     */
-    protected Set<Artifact> resolveArtifactsAether(final MavenProject artifactProject,
             final String scope,
             final ArtifactFilter filter) throws org.sonatype.aether.resolution.DependencyResolutionException,
         InstallationException,
