@@ -10,8 +10,6 @@ package de.cismet.cids.mavenplugin.distgen;
 import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.ArtifactCollector;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
 import org.apache.maven.execution.MavenSession;
@@ -23,7 +21,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingException;
-import org.apache.maven.shared.dependency.tree.DependencyTreeBuilder;
 
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
@@ -205,33 +202,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @parameter
      */
     private transient DependencyEx[] dependencyConfiguration;
-
-    /**
-     * The artifact repository to use.
-     *
-     * @parameter  expression="${localRepository}"
-     * @required
-     * @readonly
-     */
-    private transient ArtifactRepository localRepository;
-
-    /**
-     * The artifact collector to use.
-     *
-     * @component
-     * @required
-     * @readonly
-     */
-    private transient ArtifactCollector artifactCollector;
-
-    /**
-     * The dependency tree builder to use.
-     *
-     * @component
-     * @required
-     * @readonly
-     */
-    private DependencyTreeBuilder dependencyTreeBuilder;
 
     /**
      * The Maven Session Object.
