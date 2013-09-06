@@ -7,25 +7,27 @@
 ****************************************************/
 package de.cismet.cids.mavenplugin.distgen;
 
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.ArtifactCollector;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
+import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingException;
-import org.apache.maven.shared.dependency.tree.DependencyNode;
-import org.apache.maven.shared.dependency.tree.DependencyTreeBuilder;
-import org.apache.maven.shared.dependency.tree.DependencyTreeBuilderException;
 
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+
+import org.sonatype.aether.collection.CollectRequest;
+import org.sonatype.aether.collection.CollectResult;
+import org.sonatype.aether.collection.DependencyCollectionException;
+import org.sonatype.aether.graph.DependencyNode;
 
 import org.twdata.maven.mojoexecutor.MojoExecutor;
 
@@ -113,6 +115,32 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     private transient Boolean skip;
 
     /**
+     * Whether to sign artifacts used to create the distribution.
+     *
+     * @parameter  expression="${cids.generate-lib.sign}" default-value="true"
+     * @required   false
+     */
+    private transient Boolean sign;
+
+    /**
+     * Whether to check artifacts if they are signed or not. If checkSignature is <code>false</code> and sign is <code>
+     * true</code> jars will be signed regardless of they current signature. if both checkSignature and sign are <code>
+     * true</code> jars will only be signed if they have not been signed with the set certificate before.
+     *
+     * @parameter  expression="${cids.generate-lib.checkSignature}" default-value="true"
+     * @required   false
+     */
+    private transient Boolean checkSignature;
+
+    /**
+     * Controls whether specific messages are presented to the user or not.
+     *
+     * @parameter  expression="${cids.generate-lib.verbose}" default-value="false"
+     * @required   false
+     */
+    private transient Boolean verbose;
+
+    /**
      * The directory where the lib directory shall be created in. It is most likely the cids Distribution directory and
      * most likely the directory that is hosted via the <code>codebase</code> parameter, too.<br/>
      * <br/>
@@ -176,33 +204,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     private transient DependencyEx[] dependencyConfiguration;
 
     /**
-     * The artifact repository to use.
-     *
-     * @parameter  expression="${localRepository}"
-     * @required
-     * @readonly
-     */
-    private transient ArtifactRepository localRepository;
-
-    /**
-     * The artifact collector to use.
-     *
-     * @component
-     * @required
-     * @readonly
-     */
-    private transient ArtifactCollector artifactCollector;
-
-    /**
-     * The dependency tree builder to use.
-     *
-     * @component
-     * @required
-     * @readonly
-     */
-    private DependencyTreeBuilder dependencyTreeBuilder;
-
-    /**
      * The Maven Session Object.
      *
      * @parameter  expression="${session}"
@@ -218,7 +219,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @required
      * @readonly
      */
-    private transient PluginManager pluginManager;
+    private transient BuildPluginManager pluginManager;
 
     /** Cache for the files whose signature has already been verified. */
     private final transient Set<File> verified = new HashSet<File>(100);
@@ -243,6 +244,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         // get all direct artifacts of the project and scan through the dependency configuration if there is some
         // additional requirement to the dependency artifacts
+        // api is 1.4 style, no way to get rid of this warning some other way except using instanceof + cast
+        @SuppressWarnings("unchecked")
         final Set<Artifact> dependencies = project.getDependencyArtifacts();
         final Set<ArtifactEx> accepted = new LinkedHashSet<ArtifactEx>(dependencies.size());
         for (final Artifact artifact : dependencies) {
@@ -404,7 +407,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         if (localConfiguration.getJarNames() == null) {
             localFileNames = null;
         } else {
-            localFileNames = new ArrayList(Arrays.asList(localConfiguration.getJarNames()));
+            localFileNames = new ArrayList<String>(Arrays.asList(localConfiguration.getJarNames()));
         }
 
         final File[] localJars = localDir.listFiles(new FileFilter() {
@@ -548,7 +551,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         jnlp.getInformation().add(info);
 
         final Resources resources = objectFactory.createResources();
-        final List resourceList = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
+        final List<Object> resourceList = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
 
         // set java properties
         final Java java = starter.getJava();
@@ -664,11 +667,15 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final Model model = createModel(artifactEx);
             final MavenProject extProject = new MavenProject(model);
 
-            extProject.setArtifact(factory.createBuildArtifact(
+            // a build artifact similar to DefaultArtifactFactory.createBuildArtifact (deprecated)
+            extProject.setArtifact(new DefaultArtifact(
                     extProject.getGroupId(),
                     extProject.getArtifactId(),
                     extProject.getVersion(),
-                    extProject.getPackaging()));
+                    Artifact.SCOPE_RUNTIME,
+                    extProject.getPackaging(),
+                    null,
+                    artifactHandlerManager.getArtifactHandler(extProject.getPackaging())));
 
             extParent = new ArtifactEx(extProject.getArtifact());
             extParent.setVirtualProject(extProject);
@@ -847,9 +854,30 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * DOCUMENT ME!
      *
-     * @param  toSign  DOCUMENT ME!
+     * @param   toSign  DOCUMENT ME!
+     *
+     * @throws  IllegalArgumentException  DOCUMENT ME!
      */
     private void signJar(final File toSign) {
+        if (toSign == null) {
+            throw new IllegalArgumentException("toSign must not be null"); // NOI18N
+        }
+
+        if (!sign) {
+            final String message = "not signing jar because sign is false"; // NOI18N
+            if (verbose) {
+                if (getLog().isInfoEnabled()) {
+                    getLog().info(message);
+                }
+            } else {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(message);
+                }
+            }
+
+            return;
+        }
+
         final String groupId = MojoExecutor.groupId("org.apache.maven.plugins");     // NOI18N
         final String artifactId = MojoExecutor.artifactId("maven-jarsigner-plugin"); // NOI18N
         final String version = MojoExecutor.version("1.2");                          // NOI18N
@@ -881,7 +909,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 pluginManager);
 
         if (getLog().isInfoEnabled()) {
-            getLog().info("Signing jar: " + toSign);
+            getLog().info("Signing jar: " + toSign); // NOI18N
         }
 
         try {
@@ -902,13 +930,29 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      *
      * @param   toSign  the jar file to verify
      *
-     * @return  true if all class files of the given jar are signed with the cismet signature, false in any other case
+     * @return  true if checkSignature is true and all class files of the given jar are signed with the cismet
+     *          signature, false in any other case
      *
      * @throws  IllegalArgumentException  if the given file is <code>null</code>
      */
     private boolean isSigned(final File toSign) {
         if (toSign == null) {
             throw new IllegalArgumentException("toSign file must not be null"); // NOI18N
+        }
+
+        if (!checkSignature) {
+            final String message = "not verifying signature because checkSignature is false"; // NOI18N
+            if (verbose) {
+                if (getLog().isInfoEnabled()) {
+                    getLog().info(message);
+                }
+            } else {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(message);
+                }
+            }
+
+            return false;
         }
 
         if (getLog().isInfoEnabled()) {
@@ -1043,7 +1087,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final Information info = objectFactory.createInformation();
 
         final Resources resources = objectFactory.createResources();
-        final List jars = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
+        final List<Object> jars = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
 
         final MavenProject artifactProject;
         if (virtual) {
@@ -1185,13 +1229,17 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         for (final ArtifactEx artifactEx : artifacts) {
             try {
                 final MavenProject artifactProject = resolveProject(artifactEx.getArtifact());
-                final DependencyNode root = dependencyTreeBuilder.buildDependencyTree(
-                        artifactProject,
-                        localRepository,
-                        factory,
-                        artifactMetadataSource,
-                        new ScopeArtifactFilter(Artifact.SCOPE_RUNTIME),
-                        artifactCollector);
+
+                final org.sonatype.aether.artifact.Artifact aetherArtifact = RepositoryUtils.toArtifact(
+                        artifactProject.getArtifact());
+                final CollectRequest collectRequest = new CollectRequest();
+                collectRequest.setRoot(new org.sonatype.aether.graph.Dependency(aetherArtifact, ""));
+                collectRequest.setRepositories(projectRepos);
+
+                final CollectResult collectResult = repoSystem.collectDependencies(repoSession, collectRequest);
+
+                final DependencyNode root = collectResult.getRoot();
+
                 artifactEx.setDependencyTreeRoot(root);
 
                 int insertionIndex = 0;
@@ -1211,7 +1259,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 getLog().error(message, ex);
 
                 throw new MojoExecutionException(message, ex);
-            } catch (final DependencyTreeBuilderException ex) {
+            } catch (final DependencyCollectionException ex) {
                 final String message = "cannot build dependency tree for artifact: " + artifactEx.getArtifact(); // NOI18N
                 getLog().error(message, ex);
 
@@ -1234,8 +1282,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         // DFS
         for (final Object o : current.getChildren()) {
             final DependencyNode child = (DependencyNode)o;
+            final Artifact artifact = RepositoryUtils.toArtifact(child.getDependency().getArtifact());
 
-            if (child.getArtifact().equals(toCheck)) {
+            if (artifact.equals(toCheck)) {
                 return true;
             } else if (isChildOf(child, toCheck)) {
                 return true;

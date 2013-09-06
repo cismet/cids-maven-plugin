@@ -34,7 +34,7 @@ public final class CreateDirectCpPropertyMojo extends AbstractMojo {
      * execution it will contain a classpath consisting of artifacts that are explicitely declared in this project's
      * pom.
      */
-    public static final String PROP_DIRECT_COMPILE_CLASSPATH = "classpath.directDependencies"; // NOI18N
+    public static final String PROP_DIRECT_COMPILE_CLASSPATH = "classpath.directDependencies";                      // NOI18N
 
     //~ Instance fields --------------------------------------------------------
 
@@ -74,6 +74,8 @@ public final class CreateDirectCpPropertyMojo extends AbstractMojo {
 
             return;
         }
+        // api is 1.4 style, no way to get rid of this warning some other way except using instanceof + cast
+        @SuppressWarnings("unchecked")
         final Set<Artifact> directDeps = project.getDependencyArtifacts();
 
         final StringBuilder directCpProp = new StringBuilder();

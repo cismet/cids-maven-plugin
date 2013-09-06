@@ -10,11 +10,18 @@
 
     <groupId>de.cismet.cids</groupId>
     <artifactId>cids-maven-plugin</artifactId>
-    <version>2.0-preview-2</version>
+    <version>2.0</version>
     <packaging>maven-plugin</packaging>
 
     <name>cids maven2 plugin</name>
     <description>Simple maven2 plugin that helps with several cids related maven actions</description>
+    <licenses>
+        <license>
+            <name>GNU Lesser General Public License</name>
+            <distribution>repo</distribution>
+            <url>http://www.gnu.org/licenses/lgpl-3.0.html</url>
+        </license>
+    </licenses>
 
     <prerequisites>
         <maven>3</maven>
@@ -25,6 +32,26 @@
         <developerConnection>scm:git:git@github.com:cismet/cids-maven-plugin.git</developerConnection>
         <url>https://github.com/cismet/cids-maven-plugin</url>
     </scm>
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/cismet/cids-maven-plugin/issues/</url>
+    </issueManagement>
+    <distributionManagement>
+        <repository>
+            <id>cismet-repo</id>
+            <name>plugins-releases-local</name>
+            <url>https://repo.cismet.de/plugins-releases-local</url>
+        </repository>
+        <snapshotRepository>
+            <id>cismet-repo</id>
+            <name>plugins-snapshots-local</name>
+            <url>https://repo.cismet.de/plugins-snapshots-local</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <properties>
+        <maven.version>3.0.5</maven.version>
+    </properties>
 
     <repositories>
         <repository>
@@ -42,37 +69,88 @@
             </snapshots>
         </repository>
     </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>cismet-repo</id>
+            <url>https://repo.cismet.de/repo</url>
+            <releases>
+                <enabled>true</enabled>
+                <checksumPolicy>warn</checksumPolicy>
+                <updatePolicy>daily</updatePolicy>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <checksumPolicy>warn</checksumPolicy>
+                <updatePolicy>interval:60</updatePolicy>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-plugin-api</artifactId>
-            <version>2.2.1</version>
+            <version>${maven.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
-            <artifactId>maven-project</artifactId>
-            <version>2.2.1</version>
+            <artifactId>maven-compat</artifactId>
+            <version>${maven.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-artifact</artifactId>
+            <version>${maven.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+            <version>${maven.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-model</artifactId>
+            <version>${maven.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-model-builder</artifactId>
+            <version>${maven.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sonatype.aether</groupId>
+            <artifactId>aether-api</artifactId>
+            <version>1.13.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sonatype.aether</groupId>
+            <artifactId>aether-util</artifactId>
+            <version>1.13.1</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-archiver</artifactId>
-            <version>1.0-alpha-12</version>
+            <version>2.3</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-utils</artifactId>
-            <version>2.0.3</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-client</artifactId>
-            <version>1.2</version>
+            <version>3.0.10</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.shared</groupId>
+            <artifactId>maven-dependency-tree</artifactId>
+            <version>2.0</version>
+        </dependency>    
+        <dependency>
+            <groupId>org.twdata.maven</groupId>
+            <artifactId>mojo-executor</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.plugin-testing</groupId>
             <artifactId>maven-plugin-testing-harness</artifactId>
-            <version>1.1</version>
+            <version>2.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -80,21 +158,28 @@
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.maven.shared</groupId>
-            <artifactId>maven-dependency-tree</artifactId>
-            <version>1.2</version>
-        </dependency>    
-        <dependency>
-            <groupId>org.twdata.maven</groupId>
-            <artifactId>mojo-executor</artifactId>
-            <version>1.0</version>
-        </dependency>
     </dependencies>
 
 
     <build>
         <plugins>
+            <!-- 
+                mscholl: the testing-harness seems to be totally broken for quite some time now, no info whether it will
+                ever work again, maybe we have to consider other testing methods
+                http://stackoverflow.com/questions/15779351/component-lookup-exception-with-org-apache-maven-repository-repositorysystem-in
+                http://stackoverflow.com/questions/14939341/error-injecting-defaultrepositorysystem-in-maven-plugin-testing-harness
+                http://jira.codehaus.org/browse/MPLUGINTESTING-25
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.15</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>com.sun.tools.xjc.maven2</groupId>
                 <artifactId>maven-jaxb-plugin</artifactId>
@@ -119,7 +204,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>1.7</version>
+                <version>1.8</version>
                 <executions>
                     <execution>
                         <phase>generate-sources</phase>
@@ -134,17 +219,69 @@
                     </sources>
                 </configuration>
             </plugin>
+            <!-- DDD: self-ref to be able to adopt and maintain direct dependency declaration -->
             <plugin>
-                <groupId>triemax</groupId>
-                <artifactId>jalopy-maven</artifactId>
-                <version>1.9.4-126</version>
-                <configuration>
-                    <excludes>
-                        <exclude>**/xjc/**</exclude>
-                    </excludes>
-                </configuration>
+                <groupId>de.cismet.cids</groupId>
+                <artifactId>cids-maven-plugin</artifactId>
+                <version>2.0-preview-2</version>
+                <executions>
+                    <execution>
+                        <id>create-compile-classpath</id>
+                        <goals>
+                            <goal>create-direct-cp-property</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>direct-compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <compilerArguments>
+                                <sourcepath>${basedir}/src/main/java</sourcepath>
+                                <classpath>${classpath.directDependencies}</classpath>
+                            </compilerArguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- DDD end -->
         </plugins>
     </build>
+    
+    <profiles>
+        <profile>
+            <id>cismet-dev</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>triemax</groupId>
+                        <artifactId>jalopy-maven</artifactId>
+                        <version>1.9.4-126</version>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/xjc/**</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
 

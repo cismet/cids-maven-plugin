@@ -7,22 +7,46 @@
 ****************************************************/
 package de.cismet.cids.mavenplugin;
 
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
-import org.apache.maven.artifact.resolver.ArtifactResolutionException;
-import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.project.DefaultProjectBuildingRequest;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
-import org.apache.maven.project.artifact.InvalidDependencyVersionException;
+import org.apache.maven.project.ProjectBuildingRequest;
+import org.apache.maven.project.ProjectBuildingResult;
 
+import org.codehaus.plexus.util.FileUtils;
+
+import org.sonatype.aether.RepositorySystem;
+import org.sonatype.aether.RepositorySystemSession;
+import org.sonatype.aether.collection.CollectRequest;
+import org.sonatype.aether.graph.Dependency;
+import org.sonatype.aether.graph.DependencyFilter;
+import org.sonatype.aether.installation.InstallRequest;
+import org.sonatype.aether.installation.InstallationException;
+import org.sonatype.aether.repository.RemoteRepository;
+import org.sonatype.aether.resolution.ArtifactRequest;
+import org.sonatype.aether.resolution.ArtifactResult;
+import org.sonatype.aether.resolution.DependencyRequest;
+import org.sonatype.aether.resolution.DependencyResult;
+import org.sonatype.aether.util.artifact.DefaultArtifact;
+import org.sonatype.aether.util.artifact.JavaScopes;
+import org.sonatype.aether.util.filter.DependencyFilterUtils;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -52,6 +76,15 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     protected transient ArtifactResolver resolver;
 
     /**
+     * DOCUMENT ME!
+     *
+     * @component  role="org.apache.maven.artifact.handler.manager.ArtifactHandlerManager"
+     * @required
+     * @readonly
+     */
+    protected transient ArtifactHandlerManager artifactHandlerManager;
+
+    /**
      * Location of the local repository.
      *
      * @parameter  expression="${localRepository}"
@@ -67,7 +100,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @required   true
      * @readonly   true
      */
-    protected transient List remoteRepos;
+    protected transient List<ArtifactRepository> remoteRepos;
 
     /**
      * The enclosing maven project.
@@ -79,29 +112,29 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     protected transient MavenProject project;
 
     /**
-     * ArtifactMetadataSource used to resolve artifacts.
+     * The entry point to Aether, i.e. the component doing all the work.
      *
-     * @component  role="org.apache.maven.artifact.metadata.ArtifactMetadataSource"
-     * @required   DOCUMENT ME!
-     * @readonly   DOCUMENT ME!
+     * @component
      */
-    protected transient ArtifactMetadataSource artifactMetadataSource;
+    protected RepositorySystem repoSystem;
+
+    /**
+     * The current repository/network configuration of Maven.
+     *
+     * @parameter  default-value="${repositorySystemSession}"
+     * @required
+     * @readonly
+     */
+    protected RepositorySystemSession repoSession;
 
     /**
      * Project builder - builds a model from a pom.xml.
      *
-     * @component  role="org.apache.maven.project.MavenProjectBuilder"
+     * @component  role="org.apache.maven.project.ProjectBuilder"
      * @required   true
      * @readonly   true
      */
-    protected transient MavenProjectBuilder mavenProjectBuilder;
-
-    /**
-     * Used to look up Artifacts in the remote repository.
-     *
-     * @component  DOCUMENT ME!
-     */
-    protected transient ArtifactFactory factory;
+    protected transient ProjectBuilder projectBuilder;
 
     /**
      * Whether to skip the execution of this mojo.
@@ -111,6 +144,14 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @readonly   true
      */
     protected transient Boolean failOnError;
+
+    /**
+     * The project's remote repositories to use for the resolution of project dependencies.
+     *
+     * @parameter  default-value="${project.remoteProjectRepositories}"
+     * @readonly
+     */
+    protected transient List<RemoteRepository> projectRepos;
 
     //~ Methods ----------------------------------------------------------------
 
@@ -123,16 +164,21 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given artifact
      *
-     * @throws  ProjectBuildingException           if no maven project can be build from the artifact information
-     * @throws  InvalidDependencyVersionException  if the artifacts cannot be created from the created maven project
-     * @throws  ArtifactResolutionException        if an artifact of the given artifact cannot be resolved
-     * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
+     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  InvalidDependencyVersionException if the
+     *                                                                        artifacts cannot be created from the
+     *                                                                        created maven project
+     * @throws  InstallationException                                         if an artifact of the given artifact
+     *                                                                        cannot be resolved
+     * @throws  IOException                                                   ArtifactNotFoundException if an artifact
+     *                                                                        of the given artifact cannot be found
+     * @throws  ProjectBuildingException                                      if no maven project can be build from the
+     *                                                                        artifact information
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope)
-            throws ProjectBuildingException,
-                InvalidDependencyVersionException,
-                ArtifactResolutionException,
-                ArtifactNotFoundException {
+            throws org.sonatype.aether.resolution.DependencyResolutionException,
+                InstallationException,
+                IOException,
+                ProjectBuildingException {
         return resolveArtifacts(artifact, scope, new ScopeArtifactFilter(scope));
     }
 
@@ -145,16 +191,24 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given artifact
      *
-     * @throws  ProjectBuildingException           if no maven project can be build from the artifact information
-     * @throws  InvalidDependencyVersionException  if the artifacts cannot be created from the created maven project
-     * @throws  ArtifactResolutionException        if an artifact of the given artifact cannot be resolved
-     * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
+     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
+     *                                                                        the given project for any reason
+     * @throws  InstallationException                                         if a temporary artifact cannot be
+     *                                                                        installed when dealing with virtual
+     *                                                                        artifacts
+     * @throws  IOException                                                   if a temporary pom cannot be written when
+     *                                                                        dealing with virtual artifacts
+     * @throws  ProjectBuildingException                                      if no maven project can be build from the
+     *                                                                        artifact information
+     *
+     * @see     #resolveArtifacts(org.apache.maven.project.MavenProject, java.lang.String,
+     *          org.apache.maven.artifact.resolver.filter.ArtifactFilter)
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope, final ArtifactFilter filter)
-            throws ProjectBuildingException,
-                InvalidDependencyVersionException,
-                ArtifactResolutionException,
-                ArtifactNotFoundException {
+            throws org.sonatype.aether.resolution.DependencyResolutionException,
+                InstallationException,
+                IOException,
+                ProjectBuildingException {
         // create a maven project from the pom
         final MavenProject pomProject = resolveProject(artifact);
         if (getLog().isDebugEnabled()) {
@@ -173,29 +227,113 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given project
      *
-     * @throws  InvalidDependencyVersionException  if the artifacts cannot be created from the created maven project
-     * @throws  ArtifactResolutionException        if an artifact of the given artifact cannot be resolved
-     * @throws  ArtifactNotFoundException          if an artifact of the given artifact cannot be found
+     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
+     *                                                                        the given project for any reason
+     * @throws  InstallationException                                         if a temporary artifact cannot be
+     *                                                                        installed when dealing with virtual
+     *                                                                        artifacts
+     * @throws  IOException                                                   if a temporary pom cannot be written when
+     *                                                                        dealing with virtual artifacts
      */
     protected Set<Artifact> resolveArtifacts(final MavenProject artifactProject,
             final String scope,
-            final ArtifactFilter filter) throws InvalidDependencyVersionException,
-        ArtifactResolutionException,
-        ArtifactNotFoundException {
-        // resolve all artifacts from the project
-        final Set runtimeArtifacts = artifactProject.createArtifacts(factory, scope, filter);
+            final ArtifactFilter filter) throws org.sonatype.aether.resolution.DependencyResolutionException,
+        InstallationException,
+        IOException {
+        org.sonatype.aether.artifact.Artifact tmpArtifact = new DefaultArtifact(
+                artifactProject.getGroupId(),
+                artifactProject.getArtifactId(),
+                artifactProject.getPackaging(),
+                artifactProject.getVersion());
+
         if (getLog().isDebugEnabled()) {
-            getLog().debug("runtime artifacts of project '" + artifactProject + "': " + runtimeArtifacts); // NOI18N
+            getLog().debug("resolving artifacts for: " + tmpArtifact); // NOI18N
         }
 
-        final ArtifactResolutionResult result = resolver.resolveTransitively(
-                runtimeArtifacts,
-                artifactProject.getArtifact(),
-                remoteRepos,
-                local,
-                artifactMetadataSource);
+        // first we check if the artifact that we handle is actually present
+        final ArtifactRequest artifactRequest = new ArtifactRequest();
+        artifactRequest.setArtifact(tmpArtifact);
+        artifactRequest.setRepositories(projectRepos);
 
-        return result.getArtifacts();
+        boolean virtual;
+        try {
+            final ArtifactResult artifactResult = repoSystem.resolveArtifact(repoSession, artifactRequest);
+
+            virtual = artifactResult.getArtifact() == null;
+        } catch (final org.sonatype.aether.resolution.ArtifactResolutionException ex) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("artifact not resolved, assuming virtual artifact: " + artifactProject, ex);
+            }
+
+            virtual = true;
+        }
+
+        try {
+            // so called virtual artifacts have to be deployed temporarily
+            if (virtual) {
+                // we deploy a pom artifact for the virtual project
+                tmpArtifact = new DefaultArtifact(
+                        tmpArtifact.getGroupId(),
+                        tmpArtifact.getArtifactId(),
+                        "pom", // NOI18N
+                        tmpArtifact.getVersion());
+                final File targetDir = new File(project.getBasedir(), "target"); // NOI18N
+                targetDir.mkdir();
+                final File tmpPom = new File(targetDir, "tmp-pom.xml"); // NOI18N
+                tmpArtifact = tmpArtifact.setFile(tmpPom);
+
+                final MavenXpp3Writer pomWriter = new MavenXpp3Writer();
+                final Model mavenModel = artifactProject.getModel();
+                mavenModel.setModelVersion("4.0.0"); // NOI18N
+                pomWriter.write(new FileWriter(tmpPom), mavenModel);
+
+                final InstallRequest installRequest = new InstallRequest();
+                installRequest.addArtifact(tmpArtifact);
+
+                repoSystem.install(repoSession, installRequest);
+            }
+
+            // we collect all dependency artifacts and filter them afterwards
+            final CollectRequest collectRequest = new CollectRequest();
+            collectRequest.setRoot(new Dependency(tmpArtifact, JavaScopes.COMPILE));
+            collectRequest.setRepositories(projectRepos);
+
+            final DependencyFilter classpathFilter = DependencyFilterUtils.classpathFilter(scope);
+            final DependencyRequest dependencyRequest = new DependencyRequest(collectRequest, classpathFilter);
+
+            final DependencyResult dependencyResult = repoSystem.resolveDependencies(repoSession, dependencyRequest);
+
+            final List<ArtifactResult> artifactResults = dependencyResult.getArtifactResults();
+
+            final Set<Artifact> result = new LinkedHashSet<Artifact>();
+            final Artifact tmpMvnArtifact = RepositoryUtils.toArtifact(tmpArtifact);
+            for (final ArtifactResult ar : artifactResults) {
+                final Artifact resolved = RepositoryUtils.toArtifact(ar.getArtifact());
+                if (!resolved.equals(tmpMvnArtifact) && filter.include(resolved)) {
+                    result.add(resolved);
+                }
+            }
+
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("resolved artifacts: " + result.toString()); // NOI18N
+            }
+
+            return result;
+        } finally {
+            if (virtual) {
+                final Artifact virtualArtifact = RepositoryUtils.toArtifact(tmpArtifact);
+                final File artifactFile = new File(local.getBasedir(), local.pathOf(virtualArtifact));
+                final File toDelete = artifactFile.getParentFile().getParentFile();
+
+                try {
+                    FileUtils.deleteDirectory(toDelete);
+                } catch (final IOException e) {
+                    if (getLog().isWarnEnabled()) {
+                        getLog().warn("cannot delete virtual artifact data from local repo: " + virtualArtifact, e); // NOI18N
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -209,16 +347,25 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      */
     protected MavenProject resolveProject(final Artifact artifact) throws ProjectBuildingException {
         // create a pom artifact from the given artifact information
-        final Artifact pom = factory.createArtifact(
+        final Artifact pom = new org.apache.maven.artifact.DefaultArtifact(
                 artifact.getGroupId(),
                 artifact.getArtifactId(),
                 artifact.getVersion(),
+                Artifact.SCOPE_RUNTIME,
+                "pom", // NOI18N
                 "", // NOI18N
-                "pom"); // NOI18N
+                artifactHandlerManager.getArtifactHandler("pom")); // NOI18N
         if (getLog().isDebugEnabled()) {
             getLog().debug("created pom artifact from artifact '" + artifact + "': " + pom); // NOI18N
         }
 
-        return mavenProjectBuilder.buildFromRepository(pom, remoteRepos, local);
+        final ProjectBuildingRequest pbRequest = new DefaultProjectBuildingRequest();
+        pbRequest.setRepositorySession(repoSession);
+        pbRequest.setRemoteRepositories(remoteRepos);
+        pbRequest.setLocalRepository(local);
+
+        final ProjectBuildingResult pbResult = projectBuilder.build(pom, pbRequest);
+
+        return pbResult.getProject();
     }
 }
