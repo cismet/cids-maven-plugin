@@ -8,6 +8,7 @@
 package de.cismet.cids.mavenplugin;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.plugin.MojoExecutionException;
 
 import java.io.File;
@@ -17,6 +18,7 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
@@ -130,22 +132,35 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
         }
 
         // also collect system artifacts and append them to the classpath string [issue:1456]
-        // we will have to iterate over all dependency artifacts because project.getSystemArtifacts() is a trap...
-        boolean first = true;
-        for (final Object o : project.getDependencyArtifacts()) {
-            final Artifact artifact = (Artifact)o;
-            if (Artifact.SCOPE_SYSTEM.equals(artifact.getScope())) {
-                if (first && getLog().isWarnEnabled()) {
-                    getLog().warn("adding system dependent libraries to classpath"); // NOI18N
-                    first = false;
-                }
+        try {
+            final Set<Artifact> systemScopeDependencies = resolveArtifacts(
+                    project,
+                    Artifact.SCOPE_SYSTEM,
+                    new ArtifactFilter() {
+
+                        @Override
+                        public boolean include(final Artifact artifact) {
+                            return true;
+                        }
+                    });
+
+            if (!systemScopeDependencies.isEmpty() && getLog().isWarnEnabled()) {
+                getLog().warn("adding system dependent libraries to classpath"); // NOI18N
+            }
+
+            for (final Artifact artifact : systemScopeDependencies) {
                 if (getLog().isDebugEnabled()) {
-                    getLog().debug("system-dependent library: " + artifact);         // NOI18N
+                    getLog().debug("system-dependent library: " + artifact); // NOI18N
                 }
                 sb.append(artifact.getFile().getAbsolutePath()).append(File.pathSeparatorChar);
                 // collect all the files for the win long classpath issue [issue:2335]
                 cpFiles.add(artifact.getFile());
             }
+        } catch (final Exception ex) {
+            getLog().warn(
+                "system scope dependencies could not be collected and will thus not be included in the classpath " // NOI18N
+                        + "if any are declared",                                                                   // NOI18N
+                ex);
         }
 
         // remove the last colon
