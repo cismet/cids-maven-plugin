@@ -5,7 +5,7 @@
     <parent>
         <groupId>de.cismet</groupId>
         <artifactId>cismet-parent</artifactId>
-        <version>2.1</version>
+        <version>3.1</version>
     </parent>
 
     <groupId>de.cismet.cids</groupId>
@@ -156,6 +156,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <version>4.12</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -219,69 +220,15 @@
                     </sources>
                 </configuration>
             </plugin>
-            <!-- DDD: self-ref to be able to adopt and maintain direct dependency declaration -->
-            <plugin>
-                <groupId>de.cismet.cids</groupId>
-                <artifactId>cids-maven-plugin</artifactId>
-                <version>2.0-preview-2</version>
-                <executions>
-                    <execution>
-                        <id>create-compile-classpath</id>
-                        <goals>
-                            <goal>create-direct-cp-property</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
-                <executions>
-                    <execution>
-                        <id>default-compile</id>
-                        <phase>none</phase>
-                    </execution>
-                    <execution>
-                        <id>direct-compile</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                        <configuration>
-                            <compilerArguments>
-                                <sourcepath>${basedir}/src/main/java</sourcepath>
-                                <classpath>${classpath.directDependencies}</classpath>
-                            </compilerArguments>
-                        </configuration>
-                    </execution>
-                </executions>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.3</version>
+                <configuration>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                </configuration>
             </plugin>
-            <!-- DDD end -->
         </plugins>
     </build>
-    
-    <profiles>
-        <profile>
-            <id>cismet-dev</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>triemax</groupId>
-                        <artifactId>jalopy-maven</artifactId>
-                        <version>1.9.4-126</version>
-                        <configuration>
-                            <excludes>
-                                <exclude>**/xjc/**</exclude>
-                            </excludes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
 
