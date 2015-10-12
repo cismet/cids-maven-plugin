@@ -26,21 +26,21 @@ import org.apache.maven.project.ProjectBuildingResult;
 
 import org.codehaus.plexus.util.FileUtils;
 
-import org.sonatype.aether.RepositorySystem;
-import org.sonatype.aether.RepositorySystemSession;
-import org.sonatype.aether.collection.CollectRequest;
-import org.sonatype.aether.graph.Dependency;
-import org.sonatype.aether.graph.DependencyFilter;
-import org.sonatype.aether.installation.InstallRequest;
-import org.sonatype.aether.installation.InstallationException;
-import org.sonatype.aether.repository.RemoteRepository;
-import org.sonatype.aether.resolution.ArtifactRequest;
-import org.sonatype.aether.resolution.ArtifactResult;
-import org.sonatype.aether.resolution.DependencyRequest;
-import org.sonatype.aether.resolution.DependencyResult;
-import org.sonatype.aether.util.artifact.DefaultArtifact;
-import org.sonatype.aether.util.artifact.JavaScopes;
-import org.sonatype.aether.util.filter.DependencyFilterUtils;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.collection.CollectRequest;
+import org.eclipse.aether.graph.Dependency;
+import org.eclipse.aether.graph.DependencyFilter;
+import org.eclipse.aether.installation.InstallRequest;
+import org.eclipse.aether.installation.InstallationException;
+import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResult;
+import org.eclipse.aether.resolution.DependencyRequest;
+import org.eclipse.aether.resolution.DependencyResult;
+import org.eclipse.aether.util.artifact.JavaScopes;
+import org.eclipse.aether.util.filter.DependencyFilterUtils;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -164,18 +164,18 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given artifact
      *
-     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  InvalidDependencyVersionException if the
-     *                                                                        artifacts cannot be created from the
-     *                                                                        created maven project
-     * @throws  InstallationException                                         if an artifact of the given artifact
-     *                                                                        cannot be resolved
-     * @throws  IOException                                                   ArtifactNotFoundException if an artifact
-     *                                                                        of the given artifact cannot be found
-     * @throws  ProjectBuildingException                                      if no maven project can be build from the
-     *                                                                        artifact information
+     * @throws  org.eclipse.aether.resolution.DependencyResolutionException  InvalidDependencyVersionException if the
+     *                                                                       artifacts cannot be created from the
+     *                                                                       created maven project
+     * @throws  InstallationException                                        if an artifact of the given artifact cannot
+     *                                                                       be resolved
+     * @throws  IOException                                                  ArtifactNotFoundException if an artifact of
+     *                                                                       the given artifact cannot be found
+     * @throws  ProjectBuildingException                                     if no maven project can be build from the
+     *                                                                       artifact information
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope)
-            throws org.sonatype.aether.resolution.DependencyResolutionException,
+            throws org.eclipse.aether.resolution.DependencyResolutionException,
                 InstallationException,
                 IOException,
                 ProjectBuildingException {
@@ -191,21 +191,20 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given artifact
      *
-     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
-     *                                                                        the given project for any reason
-     * @throws  InstallationException                                         if a temporary artifact cannot be
-     *                                                                        installed when dealing with virtual
-     *                                                                        artifacts
-     * @throws  IOException                                                   if a temporary pom cannot be written when
-     *                                                                        dealing with virtual artifacts
-     * @throws  ProjectBuildingException                                      if no maven project can be build from the
-     *                                                                        artifact information
+     * @throws  org.eclipse.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
+     *                                                                       the given project for any reason
+     * @throws  InstallationException                                        if a temporary artifact cannot be installed
+     *                                                                       when dealing with virtual artifacts
+     * @throws  IOException                                                  if a temporary pom cannot be written when
+     *                                                                       dealing with virtual artifacts
+     * @throws  ProjectBuildingException                                     if no maven project can be build from the
+     *                                                                       artifact information
      *
      * @see     #resolveArtifacts(org.apache.maven.project.MavenProject, java.lang.String,
      *          org.apache.maven.artifact.resolver.filter.ArtifactFilter)
      */
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope, final ArtifactFilter filter)
-            throws org.sonatype.aether.resolution.DependencyResolutionException,
+            throws org.eclipse.aether.resolution.DependencyResolutionException,
                 InstallationException,
                 IOException,
                 ProjectBuildingException {
@@ -227,20 +226,19 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given project
      *
-     * @throws  org.sonatype.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
-     *                                                                        the given project for any reason
-     * @throws  InstallationException                                         if a temporary artifact cannot be
-     *                                                                        installed when dealing with virtual
-     *                                                                        artifacts
-     * @throws  IOException                                                   if a temporary pom cannot be written when
-     *                                                                        dealing with virtual artifacts
+     * @throws  org.eclipse.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
+     *                                                                       the given project for any reason
+     * @throws  InstallationException                                        if a temporary artifact cannot be installed
+     *                                                                       when dealing with virtual artifacts
+     * @throws  IOException                                                  if a temporary pom cannot be written when
+     *                                                                       dealing with virtual artifacts
      */
     protected Set<Artifact> resolveArtifacts(final MavenProject artifactProject,
             final String scope,
-            final ArtifactFilter filter) throws org.sonatype.aether.resolution.DependencyResolutionException,
+            final ArtifactFilter filter) throws org.eclipse.aether.resolution.DependencyResolutionException,
         InstallationException,
         IOException {
-        org.sonatype.aether.artifact.Artifact tmpArtifact = new DefaultArtifact(
+        org.eclipse.aether.artifact.Artifact tmpArtifact = new DefaultArtifact(
                 artifactProject.getGroupId(),
                 artifactProject.getArtifactId(),
                 artifactProject.getPackaging(),
@@ -260,7 +258,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
             final ArtifactResult artifactResult = repoSystem.resolveArtifact(repoSession, artifactRequest);
 
             virtual = artifactResult.getArtifact() == null;
-        } catch (final org.sonatype.aether.resolution.ArtifactResolutionException ex) {
+        } catch (final org.eclipse.aether.resolution.ArtifactResolutionException ex) {
             if (getLog().isDebugEnabled()) {
                 getLog().debug("artifact not resolved, assuming virtual artifact: " + artifactProject, ex);
             }

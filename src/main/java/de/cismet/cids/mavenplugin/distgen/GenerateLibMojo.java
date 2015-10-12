@@ -24,10 +24,10 @@ import org.apache.maven.project.ProjectBuildingException;
 
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
-import org.sonatype.aether.collection.CollectRequest;
-import org.sonatype.aether.collection.CollectResult;
-import org.sonatype.aether.collection.DependencyCollectionException;
-import org.sonatype.aether.graph.DependencyNode;
+import org.eclipse.aether.collection.CollectRequest;
+import org.eclipse.aether.collection.CollectResult;
+import org.eclipse.aether.collection.DependencyCollectionException;
+import org.eclipse.aether.graph.DependencyNode;
 
 import org.twdata.maven.mojoexecutor.MojoExecutor;
 
@@ -1230,10 +1230,10 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             try {
                 final MavenProject artifactProject = resolveProject(artifactEx.getArtifact());
 
-                final org.sonatype.aether.artifact.Artifact aetherArtifact = RepositoryUtils.toArtifact(
+                final org.eclipse.aether.artifact.Artifact aetherArtifact = RepositoryUtils.toArtifact(
                         artifactProject.getArtifact());
                 final CollectRequest collectRequest = new CollectRequest();
-                collectRequest.setRoot(new org.sonatype.aether.graph.Dependency(aetherArtifact, ""));
+                collectRequest.setRoot(new org.eclipse.aether.graph.Dependency(aetherArtifact, ""));
                 collectRequest.setRepositories(projectRepos);
 
                 final CollectResult collectResult = repoSystem.collectDependencies(repoSession, collectRequest);
