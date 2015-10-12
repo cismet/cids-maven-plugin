@@ -5,12 +5,12 @@
     <parent>
         <groupId>de.cismet</groupId>
         <artifactId>cismet-parent</artifactId>
-        <version>2.0</version>
+        <version>3.1</version>
     </parent>
 
     <groupId>de.cismet.cids</groupId>
     <artifactId>cids-maven-plugin</artifactId>
-    <version>2.0.1</version>
+    <version>2.1</version>
     <packaging>maven-plugin</packaging>
 
     <name>cids maven2 plugin</name>
@@ -24,14 +24,15 @@
     </licenses>
 
     <prerequisites>
-        <maven>3</maven>
+        <maven>3.3.1</maven>
     </prerequisites>
 
     <scm>
         <connection>https://github.com/cismet/cids-maven-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:cismet/cids-maven-plugin.git</developerConnection>
         <url>https://github.com/cismet/cids-maven-plugin</url>
-    </scm>
+      <tag>v2.1</tag>
+  </scm>
     <issueManagement>
         <system>GitHub</system>
         <url>https://github.com/cismet/cids-maven-plugin/issues/</url>
@@ -50,7 +51,7 @@
     </distributionManagement>
 
     <properties>
-        <maven.version>3.0.5</maven.version>
+        <maven.version>3.3.1</maven.version>
     </properties>
 
     <repositories>
@@ -118,44 +119,45 @@
             <version>${maven.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.sonatype.aether</groupId>
+            <groupId>org.eclipse.aether</groupId>
             <artifactId>aether-api</artifactId>
-            <version>1.13.1</version>
+            <version>1.0.2.v20150114</version>
         </dependency>
         <dependency>
-            <groupId>org.sonatype.aether</groupId>
+            <groupId>org.eclipse.aether</groupId>
             <artifactId>aether-util</artifactId>
-            <version>1.13.1</version>
+            <version>1.0.2.v20150114</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-archiver</artifactId>
-            <version>2.3</version>
+            <version>3.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-utils</artifactId>
-            <version>3.0.10</version>
+            <version>3.0.22</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.shared</groupId>
             <artifactId>maven-dependency-tree</artifactId>
-            <version>2.0</version>
+            <version>2.2</version>
         </dependency>    
         <dependency>
             <groupId>org.twdata.maven</groupId>
             <artifactId>mojo-executor</artifactId>
-            <version>2.0.1</version>
+            <version>2.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.plugin-testing</groupId>
             <artifactId>maven-plugin-testing-harness</artifactId>
-            <version>2.1</version>
+            <version>3.3.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <version>4.12</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -219,69 +221,15 @@
                     </sources>
                 </configuration>
             </plugin>
-            <!-- DDD: self-ref to be able to adopt and maintain direct dependency declaration -->
-            <plugin>
-                <groupId>de.cismet.cids</groupId>
-                <artifactId>cids-maven-plugin</artifactId>
-                <version>2.0-preview-2</version>
-                <executions>
-                    <execution>
-                        <id>create-compile-classpath</id>
-                        <goals>
-                            <goal>create-direct-cp-property</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
-                <executions>
-                    <execution>
-                        <id>default-compile</id>
-                        <phase>none</phase>
-                    </execution>
-                    <execution>
-                        <id>direct-compile</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                        <configuration>
-                            <compilerArguments>
-                                <sourcepath>${basedir}/src/main/java</sourcepath>
-                                <classpath>${classpath.directDependencies}</classpath>
-                            </compilerArguments>
-                        </configuration>
-                    </execution>
-                </executions>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.3</version>
+                <configuration>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                </configuration>
             </plugin>
-            <!-- DDD end -->
         </plugins>
     </build>
-    
-    <profiles>
-        <profile>
-            <id>cismet-dev</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>triemax</groupId>
-                        <artifactId>jalopy-maven</artifactId>
-                        <version>1.9.4-126</version>
-                        <configuration>
-                            <excludes>
-                                <exclude>**/xjc/**</exclude>
-                            </excludes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
 
