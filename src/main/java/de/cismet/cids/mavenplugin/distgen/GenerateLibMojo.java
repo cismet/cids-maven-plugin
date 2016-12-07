@@ -880,13 +880,16 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         final String groupId = MojoExecutor.groupId("org.apache.maven.plugins");     // NOI18N
         final String artifactId = MojoExecutor.artifactId("maven-jarsigner-plugin"); // NOI18N
-        final String version = MojoExecutor.version("1.2");                          // NOI18N
+        final String version = MojoExecutor.version("1.4");                          // NOI18N
         final Plugin plugin = MojoExecutor.plugin(groupId, artifactId, version);
 
         final String goal = MojoExecutor.goal("sign"); // NOI18N
 
         final String keystorePath = project.getProperties().getProperty("de.cismet.keystore.path"); // NOI18N
         final String keystorePass = project.getProperties().getProperty("de.cismet.keystore.pass"); // NOI18N
+        final String tsaServer = (project.getProperties().getProperty("de.cismet.signing.tsa.server") != null)
+            ? project.getProperties().getProperty("de.cismet.signing.tsa.server")
+            : "http://sha256timestamp.ws.symantec.com/sha256/timestamp";                            // NOI18N
 
         if ((keystorePass == null) || (keystorePath == null)) {
             if (getLog().isWarnEnabled()) {
@@ -900,8 +903,18 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final MojoExecutor.Element archive = MojoExecutor.element("archive", toSign.getAbsolutePath()); // NOI18N
         final MojoExecutor.Element keystore = MojoExecutor.element("keystore", keystorePath);           // NOI18N
         final MojoExecutor.Element storepass = MojoExecutor.element("storepass", keystorePass);         // NOI18N
+        final MojoExecutor.Element tsa = MojoExecutor.element("tsa", tsaServer);                        // NOI18N
+        final MojoExecutor.Element removeExistingSignatures = MojoExecutor.element("removeExistingSignatures", "true");
+        final MojoExecutor.Element processMainArtifact = MojoExecutor.element("processMainArtifact", "false");
         final MojoExecutor.Element alias = MojoExecutor.element("alias", "cismet");                     // NOI18N
-        final Xpp3Dom configuration = MojoExecutor.configuration(archive, keystore, storepass, alias);
+        final Xpp3Dom configuration = MojoExecutor.configuration(
+                archive,
+                keystore,
+                storepass,
+                tsa,
+                removeExistingSignatures,
+                processMainArtifact,
+                alias);
 
         final MojoExecutor.ExecutionEnvironment environment = MojoExecutor.executionEnvironment(
                 project,
@@ -984,8 +997,19 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final JarInputStream jis = new JarInputStream(new BufferedInputStream(new FileInputStream(toSign)), true);
             final KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
             keystore.load(new BufferedInputStream(new FileInputStream(keystorePath)), keystorePass.toCharArray());
-            final Certificate cismet = keystore.getCertificate("cismet"); // NOI18N
-            final PublicKey key = cismet.getPublicKey();
+            final Certificate[] cismetCertificateChain = keystore.getCertificateChain("cismet"); // NOI18N
+
+            if (cismetCertificateChain.length < 2) {
+                getLog().warn(
+                    "Cannot verify signature because cismet certificate is not signed"); // NOI18N
+                // bail out, signature check failed
+                return false;
+            }
+            // the actual cismet certificate is the last in the chain
+            final Certificate cismetCertificate = cismetCertificateChain[cismetCertificateChain.length - 1];
+
+            // the signingKey of the certificate used to sign the cismet certificate
+            final PublicKey signingKey = cismetCertificateChain[cismetCertificateChain.length - 2].getPublicKey();
 
             JarEntry entry;
             while ((entry = jis.getNextJarEntry()) != null) {
@@ -1013,9 +1037,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 } else {
                     boolean isVerified = false;
                     for (final Certificate cert : certs) {
-                        if (cert.equals(cismet)) {
+                        if (cert.equals(cismetCertificate)) {
                             try {
-                                cert.verify(key);
+                                cert.verify(signingKey);
                                 isVerified = true;
 
                                 // we can get outta here
