@@ -984,8 +984,19 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final JarInputStream jis = new JarInputStream(new BufferedInputStream(new FileInputStream(toSign)), true);
             final KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
             keystore.load(new BufferedInputStream(new FileInputStream(keystorePath)), keystorePass.toCharArray());
-            final Certificate cismet = keystore.getCertificate("cismet"); // NOI18N
-            final PublicKey key = cismet.getPublicKey();
+            final Certificate[] cismetCertificateChain = keystore.getCertificateChain("cismet"); // NOI18N
+
+            if (cismetCertificateChain.length < 2) {
+                getLog().warn(
+                    "Cannot verify signature because cismet certificate is not signed"); // NOI18N
+                // bail out, signature check failed
+                return false;
+            }
+            // the actual cismet certificate is the last in the chain
+            final Certificate cismetCertificate = cismetCertificateChain[cismetCertificateChain.length - 1];
+
+            // the signingKey of the certificate used to sign the cismet certificate
+            final PublicKey signingKey = cismetCertificateChain[cismetCertificateChain.length - 2].getPublicKey();
 
             JarEntry entry;
             while ((entry = jis.getNextJarEntry()) != null) {
@@ -1013,9 +1024,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 } else {
                     boolean isVerified = false;
                     for (final Certificate cert : certs) {
-                        if (cert.equals(cismet)) {
+                        if (cert.equals(cismetCertificate)) {
                             try {
-                                cert.verify(key);
+                                cert.verify(signingKey);
                                 isVerified = true;
 
                                 // we can get outta here
