@@ -241,6 +241,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             return;
         }
+        if (getLog().isDebugEnabled()) {
+            getLog().debug(">>>>>>>>>>> executing GenerateLibMojo <<<<<<<<<<<<<<");
+        }
 
         // get all direct artifacts of the project and scan through the dependency configuration if there is some
         // additional requirement to the dependency artifacts
@@ -1249,13 +1252,16 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      */
     private List<ArtifactEx> determineProcessingOrder(final Set<ArtifactEx> artifacts) throws MojoExecutionException {
         final LinkedList<ArtifactEx> list = new LinkedList<ArtifactEx>();
-
+        if (getLog().isDebugEnabled()) {
+            getLog().debug("determineProcessingOrder for " + artifacts.size() + " ArtifactEx Artifacts");
+        }
         for (final ArtifactEx artifactEx : artifacts) {
             try {
                 final MavenProject artifactProject = resolveProject(artifactEx.getArtifact());
 
                 final org.eclipse.aether.artifact.Artifact aetherArtifact = RepositoryUtils.toArtifact(
                         artifactProject.getArtifact());
+
                 final CollectRequest collectRequest = new CollectRequest();
                 collectRequest.setRoot(new org.eclipse.aether.graph.Dependency(aetherArtifact, ""));
                 collectRequest.setRepositories(projectRepos);

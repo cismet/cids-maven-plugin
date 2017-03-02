@@ -344,25 +344,34 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @throws  ProjectBuildingException  if the project cannot be created
      */
     protected MavenProject resolveProject(final Artifact artifact) throws ProjectBuildingException {
-        // create a pom artifact from the given artifact information
+        if (getLog().isDebugEnabled()) {
+            // create a pom artifact from the given artifact information
+            getLog().debug("creating pom artifact for artifact '" + artifact + "'");         // NOI18N
+        }
         final Artifact pom = new org.apache.maven.artifact.DefaultArtifact(
                 artifact.getGroupId(),
                 artifact.getArtifactId(),
                 artifact.getVersion(),
                 Artifact.SCOPE_RUNTIME,
-                "pom", // NOI18N
-                "", // NOI18N
-                artifactHandlerManager.getArtifactHandler("pom")); // NOI18N
+                "pom",                                                                       // NOI18N
+                "",                                                                          // NOI18N
+                artifactHandlerManager.getArtifactHandler("pom"));                           // NOI18N
         if (getLog().isDebugEnabled()) {
             getLog().debug("created pom artifact from artifact '" + artifact + "': " + pom); // NOI18N
         }
 
         final ProjectBuildingRequest pbRequest = new DefaultProjectBuildingRequest();
+        pbRequest.setSystemProperties(System.getProperties());
         pbRequest.setRepositorySession(repoSession);
         pbRequest.setRemoteRepositories(remoteRepos);
         pbRequest.setLocalRepository(local);
 
         final ProjectBuildingResult pbResult = projectBuilder.build(pom, pbRequest);
+        final MavenProject mavenProject = pbResult.getProject();
+
+        if (getLog().isDebugEnabled()) {
+            getLog().debug("created maven Project from artifact '" + artifact + "': " + mavenProject.getId()); // NOI18N
+        }
 
         return pbResult.getProject();
     }
