@@ -17,7 +17,7 @@ import java.io.File;
 import de.cismet.cids.jnlp.Jnlp;
 
 /**
- * DOCUMENT ME!
+ * Ex = EXtension!
  *
  * @author   martin.scholl@cismet.de
  * @version  $Revision$, $Date$

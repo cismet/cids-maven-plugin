@@ -90,19 +90,27 @@ public final class DependencyEx extends Dependency {
     }
 
     /**
-     * DOCUMENT ME!
+     * <strong>WARNING</strong><br>
+     * Usage of additional dependencies is strongly discouraged as it totally breaks the maven dependency mechanism.
      *
-     * @return  DOCUMENT ME!
+     * @return      DOCUMENT ME!
+     *
+     * @deprecated  See https://cismet.slack.com/files/pascal.dihe/F45QC6805/Autodistribution_mit_cids-maven-plugin
      */
+    @Deprecated
     public Dependency[] getAdditionalDependencies() {
         return additionalDependencies;
     }
 
     /**
-     * DOCUMENT ME!
+     * <strong>WARNING</strong><br>
+     * Usage of additional dependencies is strongly discouraged as it totally breaks the maven dependency mechanism.
      *
-     * @param  additionalDependencies  DOCUMENT ME!
+     * @param       additionalDependencies  DOCUMENT ME!
+     *
+     * @deprecated  See https://cismet.slack.com/files/pascal.dihe/F45QC6805/Autodistribution_mit_cids-maven-plugin
      */
+    @Deprecated
     public void setAdditionalDependencies(final Dependency[] additionalDependencies) {
         this.additionalDependencies = additionalDependencies;
     }

@@ -81,7 +81,7 @@ import de.cismet.cids.jnlp.Security;
 import de.cismet.cids.mavenplugin.AbstractCidsMojo;
 
 /**
- * Goal which generates a the lib folder of a cids distribution.
+ * <strong>Goal</strong> which generates a the lib folder of a cids distribution.
  *
  * @version                       $Revision$, $Date$
  * @goal                          generate-lib
@@ -268,6 +268,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final List<ArtifactEx> processed = new ArrayList<ArtifactEx>(ordered.size());
 
         for (final ArtifactEx toProcess : ordered) {
+            getLog().info("processing dependency extension "
+                        + (ordered.size() - processed.size() + 1) + "/"
+                        + ordered.size() + ": " + toProcess.getArtifact().getArtifactId());
             processArtifact(toProcess, processed);
         }
     }
@@ -283,10 +286,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      */
     private void processArtifact(final ArtifactEx artifactEx, final List<ArtifactEx> processed)
             throws MojoExecutionException, MojoFailureException {
-        if (getLog().isDebugEnabled()) {
-            getLog().debug("processing artifact: " + artifactEx); // NOI18N
-        }
-
         final ArtifactEx virtualParent = createVirtualArtifact(artifactEx);
         if (artifactEx.getDependencyEx().isGenerateJar()) {
             // search for already processed child artifacts
@@ -305,10 +304,10 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 }
             }
 
-            artifactEx.setClassPathJar(generateJar(artifactEx, child));
+            artifactEx.setClassPathJar(generateClasspathJar(artifactEx, child));
 
             if (virtualParent != null) {
-                artifactEx.setExtendedClassPathJar(generateJar(virtualParent, artifactEx));
+                artifactEx.setExtendedClassPathJar(generateClasspathJar(virtualParent, artifactEx));
             }
 
             if (artifactEx.getDependencyEx().getStarterConfiguration() != null) {
@@ -459,6 +458,14 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final Manifest manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
         manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
+        manifest.getMainAttributes()
+                .put(
+                    Attributes.Name.IMPLEMENTATION_TITLE,
+                    artifactEx.getArtifact().getArtifactId()
+                    + "-"
+                    + CLASSIFIER_STARTER);
+        manifest.getMainAttributes().put(Attributes.Name.IMPLEMENTATION_VENDOR, "cismet GmbH");
+        manifest.getMainAttributes().put(Attributes.Name.IMPLEMENTATION_VERSION, artifactEx.getArtifact().getVersion());
         manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, mainClass);
 
         JarOutputStream target = null;
@@ -641,7 +648,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     }
 
     /**
-     * DOCUMENT ME!
+     * DOCUMENT ME! <strong>WARNING</strong><br>
+     * Usage of additional dependencies is strongly discouraged as it totally breaks the maven dependency mechanism
      *
      * @param   artifactEx  DOCUMENT ME!
      *
@@ -649,6 +657,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      *
      * @throws  MojoExecutionException  DOCUMENT ME!
      */
+    @Deprecated
     private ArtifactEx createVirtualArtifact(final ArtifactEx artifactEx) throws MojoExecutionException {
         // prepare virtual project for additional dependencies if present
         final Dependency[] additionalDeps = artifactEx.getDependencyEx().getAdditionalDependencies();
@@ -663,6 +672,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             extParent = null;
         } else {
+            getLog().warn(
+                "Usage of additional dependencies is strongly discouraged as it totally breaks the maven dependency mechanism");
             if (getLog().isDebugEnabled()) {
                 getLog().debug("generating virtual artifact for artifact: " + artifactEx); // NOI18N
             }
@@ -735,6 +746,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final Dependency[] additionalDeps = artifactEx.getDependencyEx().getAdditionalDependencies();
         if (additionalDeps != null) {
             for (final Dependency dep : additionalDeps) {
+                getLog().warn("Processing additional dependency: " + dep.getArtifactId());
                 model.addDependency(dep);
             }
         }
@@ -770,7 +782,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @throws  MojoExecutionException  DOCUMENT ME!
      * @throws  IllegalStateException   DOCUMENT ME!
      */
-    private File generateJar(final ArtifactEx parent, final ArtifactEx child) throws MojoExecutionException {
+    private File generateClasspathJar(final ArtifactEx parent, final ArtifactEx child) throws MojoExecutionException {
         final Artifact parentArtifact = parent.getArtifact();
         final boolean virtual = parent.isVirtual();
 
@@ -793,6 +805,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             filter = new ScopeArtifactFilter(Artifact.SCOPE_RUNTIME);
         } else {
             filter = new ChildDependencyFilter(child);
+            getLog().info("appending child classpath JAR: " + child.getClassPathJar().getAbsolutePath());
             classpath.append(getManifestCompatiblePath(child.getClassPathJar().getAbsolutePath())).append(' ');
         }
 
@@ -809,14 +822,24 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 if (!isSigned(dep.getFile())) {
                     signJar(dep.getFile());
                 }
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(dep.getFile().getAbsolutePath());
+                }
                 classpath.append(getManifestCompatiblePath(dep.getFile().getAbsolutePath())).append(' ');
             }
 
             // Generate Manifest and jar File
             final Manifest manifest = new Manifest();
-            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
+            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");                    // NOI18N
             manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
-
+            manifest.getMainAttributes()
+                    .put(
+                        Attributes.Name.IMPLEMENTATION_TITLE,
+                        parent.getArtifact().getArtifactId()
+                        + "-"
+                        + CLASSIFIER_CLASSPATH);
+            manifest.getMainAttributes().put(Attributes.Name.IMPLEMENTATION_VENDOR, "cismet GmbH");
+            manifest.getMainAttributes().put(Attributes.Name.IMPLEMENTATION_VERSION, parent.getArtifact().getVersion());
             final String jarname = parentArtifact.getArtifactId() + "-" + parentArtifact.getBaseVersion() // NOI18N
                         + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JAR;                                // NOI18N
 
@@ -832,7 +855,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
 
             if (getLog().isInfoEnabled()) {
-                getLog().info("generated jar: " + jar); // NOI18N
+                getLog().info("generated classpath jar: " + jar); // NOI18N
             }
 
             return jar;
@@ -1132,7 +1155,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final Jar self = objectFactory.createJar();
 
             self.setHref(generateJarHRef(parentArtifact));
-
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("add JAR self reference: " + self.getHref());
+            }
             jars.add(self);
         }
 
@@ -1159,7 +1184,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             // add the child jnlp extension
             final Extension extension = objectFactory.createExtension();
             extension.setHref(child.getClassPathJnlp().getHref());
-
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("add JAR extension: " + extension.getHref());
+            }
             jars.add(extension);
         }
 
@@ -1180,7 +1207,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
             final Jar jar = objectFactory.createJar();
             jar.setHref(generateJarHRef(dep));
-
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("add JAR dependency: " + jar.getHref());
+            }
             jars.add(jar);
         }
 
@@ -1200,7 +1229,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         final String jnlpName = parentArtifact.getArtifactId() + "-" + parentArtifact.getBaseVersion() // NOI18N
                     + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JNLP;                                // NOI18N
-
+        if (getLog().isDebugEnabled()) {
+            getLog().debug("generating JNLP " + jnlpName);
+        }
         return writeJnlp(jnlp, jnlpName, null);
     }
 
@@ -1391,7 +1422,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     private File generateClasspathDir() throws IOException {
         final File classpath = new File(generateStructure(), CLASSPATH_DIR + accountExtension);
         if (!classpath.exists() && !classpath.isDirectory() && !classpath.mkdir()) {
-            throw new IOException("could not create starter folder: " + classpath); // NOI18N
+            throw new IOException("could not create classpath lib folder: " + classpath); // NOI18N
         }
 
         return classpath;
@@ -1497,9 +1528,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             ret = new URL(m2codebase).toString();
         } catch (final MalformedURLException e) {
             if (codebase == null) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug("codebase is not provided and m2codebase is not absolute", e); // NOI18N
-                }
+                getLog().warn("codebase is not provided and m2codebase is not absolute: " + e.getMessage(), e); // NOI18N
             } else {
                 final StringBuilder sb = new StringBuilder(trimSlash(codebase.toString()));
 
@@ -1507,6 +1536,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 sb.append(trimSlash(m2codebase));
 
                 ret = sb.toString();
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug("codebase & m2codebase is not absolute, setting M2BaseURL to " + ret); // NOI18N
+                }
             }
         }
 
