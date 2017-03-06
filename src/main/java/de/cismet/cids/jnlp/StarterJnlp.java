@@ -22,31 +22,29 @@ import java.util.List;
  * @author   pd
  * @version  $Revision$, $Date$
  */
-public class ClasspathJnlp extends Jnlp {
+public class StarterJnlp extends Jnlp {
 
     //~ Instance fields --------------------------------------------------------
 
     private final Jnlp delegate;
-
-    private String privateHref;
 
     private File jnlpFile;
 
     //~ Constructors -----------------------------------------------------------
 
     /**
-     * Creates a new ClasspathJnlp object.
+     * Creates a new StarterJnlp object.
      */
-    public ClasspathJnlp() {
+    public StarterJnlp() {
         this.delegate = new Jnlp();
     }
 
     /**
-     * Creates a new ClasspathJnlp object.
+     * Creates a new StarterJnlp object.
      *
      * @param  delegate  DOCUMENT ME!
      */
-    public ClasspathJnlp(final Jnlp delegate) {
+    public StarterJnlp(final Jnlp delegate) {
         this.delegate = delegate;
     }
 
@@ -59,10 +57,10 @@ public class ClasspathJnlp extends Jnlp {
      *
      * @return  DOCUMENT ME!
      */
-    public static final ClasspathJnlp[] wrap(final Jnlp... jnlps) {
-        final de.cismet.cids.jnlp.ClasspathJnlp[] result = new de.cismet.cids.jnlp.ClasspathJnlp[jnlps.length];
+    public static final StarterJnlp[] wrap(final Jnlp... jnlps) {
+        final de.cismet.cids.jnlp.StarterJnlp[] result = new de.cismet.cids.jnlp.StarterJnlp[jnlps.length];
         for (int i = 0; i < jnlps.length; i++) {
-            result[i] = new de.cismet.cids.jnlp.ClasspathJnlp(jnlps[i]);
+            result[i] = new de.cismet.cids.jnlp.StarterJnlp(jnlps[i]);
         }
         return result;
     }
@@ -83,24 +81,6 @@ public class ClasspathJnlp extends Jnlp {
      */
     public void setJnlpFile(final File jnlpFile) {
         this.jnlpFile = jnlpFile;
-    }
-
-    /**
-     * Get the value of privateHref.
-     *
-     * @return  the value of privateHref
-     */
-    public String getPrivateHref() {
-        return privateHref;
-    }
-
-    /**
-     * Set the value of privateHref.
-     *
-     * @param  privateHref  new value of privateHref
-     */
-    public void setPrivateHref(final String privateHref) {
-        this.privateHref = privateHref;
     }
 
     /**
@@ -293,8 +273,8 @@ public class ClasspathJnlp extends Jnlp {
     @Override
     public boolean equals(final Object o) {
         Object target = o;
-        if (o instanceof ClasspathJnlp) {
-            target = ((ClasspathJnlp)o).delegate;
+        if (o instanceof StarterJnlp) {
+            target = ((StarterJnlp)o).delegate;
         }
         return this.delegate.equals(target);
     }

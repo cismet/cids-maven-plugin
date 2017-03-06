@@ -31,6 +31,8 @@ public final class DependencyEx extends Dependency {
 
     private String accountExtension;
 
+    private boolean generateSecurityJar = true;
+
     //~ Constructors -----------------------------------------------------------
 
     /**
@@ -66,6 +68,7 @@ public final class DependencyEx extends Dependency {
         sb.append(super.toString());
         sb.append(", generateJar=").append(generateJar);
         sb.append(", generateJnlp=").append(generateJnlp);
+        sb.append(", generateSecurityJar=").append(generateSecurityJar);
         sb.append(", additionalDeps=").append(Arrays.deepToString(additionalDependencies));
         sb.append(", accountExtension=").append(accountExtension);
         sb.append(", starter=").append(starterConfiguration);
@@ -170,5 +173,23 @@ public final class DependencyEx extends Dependency {
      */
     public void setAccountExtension(final String accountExtension) {
         this.accountExtension = accountExtension;
+    }
+
+    /**
+     * Get the value of generateSecurityJar.
+     *
+     * @return  the value of generateSecurityJar
+     */
+    public boolean isGenerateSecurityJar() {
+        return generateSecurityJar;
+    }
+
+    /**
+     * Set the value of generateSecurityJar.
+     *
+     * @param  generateSecurityJar  new value of generateSecurityJar
+     */
+    public void setGenerateSecurityJar(final boolean generateSecurityJar) {
+        this.generateSecurityJar = generateSecurityJar;
     }
 }

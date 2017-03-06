@@ -48,6 +48,7 @@ import java.security.cert.Certificate;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -59,6 +60,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.zip.ZipEntry;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
@@ -78,6 +80,7 @@ import de.cismet.cids.jnlp.ObjectFactory;
 import de.cismet.cids.jnlp.Property;
 import de.cismet.cids.jnlp.Resources;
 import de.cismet.cids.jnlp.Security;
+import de.cismet.cids.jnlp.StarterJnlp;
 
 import de.cismet.cids.mavenplugin.AbstractCidsMojo;
 
@@ -89,7 +92,7 @@ import de.cismet.cids.mavenplugin.AbstractCidsMojo;
  * @phase                         prepare-package
  * @requiresDependencyResolution  runtime
  */
-// TODO: this class should be totally refactored as the design is awkward
+// TODO: this class should be totally refactored as the design is awkward - NO SHIT SHERLOCK!
 public class GenerateLibMojo extends AbstractCidsMojo {
 
     //~ Static fields/initializers ---------------------------------------------
@@ -173,8 +176,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
     /**
      * The <code>codebase</code> URL is the pendant to the outputDirectory. It serves as a pointer to the publicly
-     * hosted distribution and will be used in <code>starterJnlp</code> file generation. If the parameter is not
-     * provided, <code>classpath-starterJnlp</code> files won't be generated.
+     * hosted distribution and will be used in <code>jnlp</code> file generation. If the parameter is not provided,
+     * <code>classpath-jnlp</code> files won't be generated.
      *
      * @parameter  property="cids.generate-lib.codebase"
      * @required   false
@@ -571,7 +574,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @throws  MojoFailureException    DOCUMENT ME!
      * @throws  MojoExecutionException  DOCUMENT ME!
      */
-    private Jnlp generateStarterJnlp(final ArtifactEx artifactEx) throws MojoFailureException, MojoExecutionException {
+    private StarterJnlp generateStarterJnlp(final ArtifactEx artifactEx) throws MojoFailureException,
+        MojoExecutionException {
         final StarterConfiguration starterConfiguration = artifactEx.getDependencyEx().getStarterConfiguration();
 
         if (starterConfiguration == null) {
@@ -585,8 +589,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         final ObjectFactory objectFactory = new ObjectFactory();
-        final Jnlp starterJnlp = objectFactory.createJnlp();
-        starterJnlp.setSpec("1.0+"); // NOI18N
+        final Jnlp jnlp = objectFactory.createJnlp();
+        jnlp.setSpec("1.0+"); // NOI18N
         final Information info = objectFactory.createInformation();
 
         final MavenProject artifactProject;
@@ -599,7 +603,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             throw new MojoExecutionException(message, ex);
         }
 
-        // set starterJnlp info
+        // set jnlp info
         if ((starterConfiguration.getTitle() != null) && !starterConfiguration.getTitle().isEmpty()) {
             info.setTitle(starterConfiguration.getTitle());
         } else {
@@ -613,7 +617,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             hp.setHref(homepage);
             info.setHomepage(hp);
         }
-        starterJnlp.getInformation().add(info);
+        jnlp.getInformation().add(info);
 
         final Resources resources = objectFactory.createResources();
         final List<Object> resourceList = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
@@ -666,6 +670,30 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
         }
 
+        // add securityJar
+
+        if (artifactEx.getDependencyEx().isGenerateSecurityJar()) {
+            final String securityJarName = artifactEx.getArtifact().getArtifactId() + "-"
+                        + artifactEx.getArtifact().getBaseVersion() // NOI18N
+                        + "-" + CLASSFIER_SECURITY + "." + FILE_EXT_JAR;
+
+            final Jar securityJar = objectFactory.createJar();
+            if (this.classpathFromMavenRepo) {
+                securityJar.setHref(generateSelfHRef(
+                        codebase,
+                        securityJarName,
+                        null,
+                        this.getAccountExtension(artifactEx)));
+            } else {
+                securityJar.setHref(generateHRef(null, securityJarName, this.getAccountExtension(artifactEx)));
+            }
+
+            securityJar.setMain("true");
+            resourceList.add(securityJar);
+
+            getLog().info("Security JAR entry added: " + securityJar.getHref());
+        }
+
         // add the extension to the main classpath jarFile
         // YES, privateHref, because classpath JNLP don't define codebase and href!
         final Extension jnlpExtension = objectFactory.createExtension();
@@ -679,7 +707,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         resourceList.add(jnlpExtension);
 
         // resources are finished
-        starterJnlp.getResources().add(resources);
+        jnlp.getResources().add(resources);
 
         // security parameters
         final Security security = objectFactory.createSecurity();
@@ -687,7 +715,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         security.setAllPermissions(allPermissions);
 
         // security is finished
-        starterJnlp.setSecurity(security);
+        jnlp.setSecurity(security);
 
         // application section
         final ApplicationDesc applicationDesc = objectFactory.createApplicationDesc();
@@ -708,7 +736,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         // application section is finished
-        starterJnlp.getApplicationDescOrAppletDescOrComponentDescOrInstallerDesc().add(applicationDesc);
+        jnlp.getApplicationDescOrAppletDescOrComponentDescOrInstallerDesc().add(applicationDesc);
 
         final String jnlpName = artifactEx.getArtifact().getArtifactId() + "-" // NOI18N
                     + artifactEx.getArtifact().getBaseVersion()
@@ -716,24 +744,32 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         // SET HREF OF STARTER JNLP!
         if (this.classpathFromMavenRepo) {
-            starterJnlp.setHref(generateSelfHRef(
+            jnlp.setHref(generateSelfHRef(
                     codebase,
                     jnlpName,
                     starterConfiguration.getStarterAlias(),
                     this.getAccountExtension(artifactEx)));
         } else {
-            starterJnlp.setHref(generateHRef(null, jnlpName, this.getAccountExtension(artifactEx)));
+            jnlp.setHref(generateHRef(null, jnlpName, this.getAccountExtension(artifactEx)));
         }
 
         // SET CODEBASE!
         final String trimmedCodebase = trimSlash(codebase.toString());
-        starterJnlp.setCodebase(trimmedCodebase);
+        jnlp.setCodebase(trimmedCodebase);
 
-        writeJnlp(
-            starterJnlp,
-            jnlpName,
-            starterConfiguration.getStarterAlias(),
-            this.getAccountExtension(artifactEx));
+        final File starterJnlpFile = writeJnlp(
+                jnlp,
+                jnlpName,
+                starterConfiguration.getStarterAlias(),
+                this.getAccountExtension(artifactEx));
+
+        final StarterJnlp starterJnlp = new StarterJnlp(jnlp);
+        starterJnlp.setJnlpFile(starterJnlpFile);
+
+        if (artifactEx.getDependencyEx().isGenerateSecurityJar()) {
+            final File securityJar = this.generateSecurityJar(artifactEx, starterJnlp);
+            getLog().info("Security JAR generated: " + securityJar.getAbsolutePath());
+        }
 
         return starterJnlp;
     }
@@ -998,18 +1034,104 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * DOCUMENT ME!
      *
-     * @param   toSign  DOCUMENT ME!
+     * @param   artifactExtension  DOCUMENT ME!
+     * @param   starterJnlp        DOCUMENT ME!
      *
-     * @throws  IllegalArgumentException  DOCUMENT ME!
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private File generateSecurityJar(final ArtifactEx artifactExtension, final StarterJnlp starterJnlp)
+            throws MojoExecutionException {
+        final Artifact artifact = artifactExtension.getArtifact();
+        JarOutputStream jarOutputStream = null;
+        try {
+            // Generate Manifest and jarFile File
+            final Manifest manifest = new Manifest();
+            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");        // NOI18N
+            manifest.getMainAttributes()
+                    .put(
+                        Attributes.Name.IMPLEMENTATION_TITLE,
+                        artifactExtension.getArtifact().getArtifactId()
+                        + "-"
+                        + CLASSFIER_SECURITY);
+            manifest.getMainAttributes().put(Attributes.Name.IMPLEMENTATION_VENDOR, "cismet GmbH");
+            manifest.getMainAttributes()
+                    .put(Attributes.Name.IMPLEMENTATION_VERSION, artifactExtension.getArtifact().getVersion());
+            final String jarname = artifact.getArtifactId() + "-" + artifact.getBaseVersion() // NOI18N
+                        + "-" + CLASSFIER_SECURITY + "." + FILE_EXT_JAR;                      // NOI18N
+
+            // write the jarFile file
+            final File jarFile = getOutputFile(jarname, null, this.getAccountExtension(artifactExtension));
+            jarOutputStream = new JarOutputStream(new FileOutputStream(jarFile), manifest);
+
+            final JarEntry jarEntry = new JarEntry("JNLP-INF/APPLICATION.JNLP");
+            jarEntry.setTime(Calendar.getInstance().getTimeInMillis());
+            jarEntry.setComment(starterJnlp.getJnlpFile().getName());
+            jarOutputStream.putNextEntry(jarEntry);
+
+            int len = 0;
+            final byte[] buffer = new byte[256];
+            final BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(
+                        starterJnlp.getJnlpFile()));
+            while ((len = inputStream.read(buffer, 0, buffer.length)) != -1) {
+                jarOutputStream.write(buffer, 0, len);
+            }
+            inputStream.close();
+            jarOutputStream.closeEntry();
+
+            // close the stream to be able to sign the jarFile
+            jarOutputStream.close();
+
+            if (!this.sign) {
+                getLog().warn("security.jar must be signed regardless of whether 'sign' is set to false!");
+            }
+            signJar(jarFile, true);
+
+            return jarFile;
+        } catch (final Exception ex) {
+            final String message = "cannot generate jar for artifact: " + artifactExtension; // NOI18N
+            getLog().error(message, ex);
+
+            throw new MojoExecutionException(message, ex);
+        } finally {
+            if (jarOutputStream != null) {
+                try {
+                    jarOutputStream.close();
+                } catch (final IOException e) {
+                    if (getLog().isWarnEnabled()) {
+                        getLog().warn("cannot close jar output stream", e); // NOI18N
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  toSign  DOCUMENT ME!
      */
     @Deprecated
     private void signJar(final File toSign) {
+        this.signJar(toSign, false);
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   toSign  DOCUMENT ME!
+     * @param   force   DOCUMENT ME!
+     *
+     * @throws  IllegalArgumentException  DOCUMENT ME!
+     */
+    private void signJar(final File toSign, final boolean force) {
         if (toSign == null) {
             throw new IllegalArgumentException("toSign must not be null"); // NOI18N
         }
 
-        if (!sign) {
-            final String message = "not signing jar because sign is false"; // NOI18N
+        if ((force | sign) == false) {
+            final String message = "not signing jar because sign is " + sign + " and force signing is " + force; // NOI18N
             if (verbose) {
                 if (getLog().isInfoEnabled()) {
                     getLog().info(message);
@@ -1297,7 +1419,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         assert artifactProject != null : "artifact project must not be null"; // NOI18N
 
-        // set starterJnlp info
+        // set jnlp info
         info.setTitle(artifactProject.getName());
         if (vendor != null) {
             info.setVendor(vendor);
@@ -1315,7 +1437,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         } else {
             filter = new ChildDependencyFilter(child);
 
-            // add the child starterJnlp jnlpExtension
+            // add the child jnlp jnlpExtension
             final Extension extension = objectFactory.createExtension();
             extension.setHref(child.getClassPathJnlp().getPrivateHref());
             getLog().info("add child JNLP extension: " + extension.getHref());
@@ -1374,11 +1496,13 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         // DO NOT SET HREF OF CLASSPATH JNLP!
         getLog().info("generating JNLP " + jnlpName);
-        writeJnlp(jnlp, jnlpName, null, this.getAccountExtension(parent));
+        final File jnlpFile = writeJnlp(jnlp, jnlpName, null, this.getAccountExtension(parent));
 
         final ClasspathJnlp classpathJnlp = new ClasspathJnlp(jnlp);
 
-        // SET HREF OF STARTER JNLP!
+        classpathJnlp.setJnlpFile(jnlpFile);
+
+        // SET HREF OF CLASSPATH JNLP!
         if (this.classpathFromMavenRepo) {
             classpathJnlp.setPrivateHref(generateSelfHRef(
                     codebase,
@@ -1400,9 +1524,11 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @param   alias             DOCUMENT ME!
      * @param   accountExtension  DOCUMENT ME!
      *
+     * @return  DOCUMENT ME!
+     *
      * @throws  MojoExecutionException  DOCUMENT ME!
      */
-    private void writeJnlp(final Jnlp jnlp, final String jnlpName, final String alias, final String accountExtension)
+    private File writeJnlp(final Jnlp jnlp, final String jnlpName, final String alias, final String accountExtension)
             throws MojoExecutionException {
         try {
             final File outFile = getOutputFile(jnlpName, alias, accountExtension);
@@ -1413,8 +1539,10 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             marshaller.marshal(jnlp, outFile);
 
             if (getLog().isInfoEnabled()) {
-                getLog().info("generated jnlp: " + outFile);                    // NOI18N
+                getLog().info("generated jnlp: " + outFile); // NOI18N
             }
+
+            return outFile;
         } catch (final Exception e) {
             final String message = "cannot create classpath jnlp: " + jnlpName; // NOI18N
             getLog().error(message, e);                                         // NOI18N
