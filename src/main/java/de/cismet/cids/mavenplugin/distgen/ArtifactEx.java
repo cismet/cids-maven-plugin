@@ -14,6 +14,7 @@ import org.eclipse.aether.graph.DependencyNode;
 
 import java.io.File;
 
+import de.cismet.cids.jnlp.ClasspathJnlp;
 import de.cismet.cids.jnlp.Jnlp;
 
 /**
@@ -38,13 +39,13 @@ public final class ArtifactEx {
     @Deprecated private transient File extendedClassPathJar;
 
     private transient File starterJar;
-    private transient Jnlp classPathJnlp;
+    private transient ClasspathJnlp classPathJnlp;
 
     /**
      * The name is totally missleading (Ex vs Extension vs Extended)! This is the dependency list of <strong>
      * additional</strong> dependencies (thier use is striongly discouraged)!
      */
-    @Deprecated private transient Jnlp extendedClassPathJnlp;
+    @Deprecated private transient ClasspathJnlp extendedClassPathJnlp;
 
     private transient Jnlp starterJnlp;
     private transient DependencyNode dependencyTreeRoot;
@@ -153,7 +154,7 @@ public final class ArtifactEx {
      *
      * @return  DOCUMENT ME!
      */
-    public Jnlp getClassPathJnlp() {
+    public ClasspathJnlp getClassPathJnlp() {
         return classPathJnlp;
     }
 
@@ -162,7 +163,7 @@ public final class ArtifactEx {
      *
      * @param  classPathJnlp  DOCUMENT ME!
      */
-    public void setClassPathJnlp(final Jnlp classPathJnlp) {
+    public void setClassPathJnlp(final ClasspathJnlp classPathJnlp) {
         this.classPathJnlp = classPathJnlp;
     }
 
@@ -214,7 +215,7 @@ public final class ArtifactEx {
      * @deprecated  DOCUMENT ME!
      */
     @Deprecated
-    public Jnlp getExtendedClassPathJnlp() {
+    public ClasspathJnlp getExtendedClassPathJnlp() {
         return extendedClassPathJnlp;
     }
 
@@ -224,7 +225,7 @@ public final class ArtifactEx {
      * @param  extendedClassPathJnlp  DOCUMENT ME!
      */
     @Deprecated
-    public void setExtendedClassPathJnlp(final Jnlp extendedClassPathJnlp) {
+    public void setExtendedClassPathJnlp(final ClasspathJnlp extendedClassPathJnlp) {
         this.extendedClassPathJnlp = extendedClassPathJnlp;
     }
 

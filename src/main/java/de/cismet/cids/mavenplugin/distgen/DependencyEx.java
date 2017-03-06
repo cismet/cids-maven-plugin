@@ -29,6 +29,8 @@ public final class DependencyEx extends Dependency {
 
     private transient StarterConfiguration starterConfiguration;
 
+    private String accountExtension;
+
     //~ Constructors -----------------------------------------------------------
 
     /**
@@ -65,6 +67,7 @@ public final class DependencyEx extends Dependency {
         sb.append(", generateJar=").append(generateJar);
         sb.append(", generateJnlp=").append(generateJnlp);
         sb.append(", additionalDeps=").append(Arrays.deepToString(additionalDependencies));
+        sb.append(", accountExtension=").append(accountExtension);
         sb.append(", starter=").append(starterConfiguration);
         sb.append(']');
 
@@ -149,5 +152,23 @@ public final class DependencyEx extends Dependency {
      */
     public void setStarterConfiguration(final StarterConfiguration starterConfiguration) {
         this.starterConfiguration = starterConfiguration;
+    }
+
+    /**
+     * Get the value of accountExtension.
+     *
+     * @return  the value of accountExtension
+     */
+    public String getAccountExtension() {
+        return accountExtension;
+    }
+
+    /**
+     * Set the value of accountExtension.
+     *
+     * @param  accountExtension  new value of accountExtension
+     */
+    public void setAccountExtension(final String accountExtension) {
+        this.accountExtension = accountExtension;
     }
 }
