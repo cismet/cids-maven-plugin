@@ -404,35 +404,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         final LocalConfiguration localConfiguration = starterConfiguration.getLocalConfiguration();
-        final File localDir;
-        try {
-            localDir = new File(generateStructure() + File.separator + getLocalDirectory(localConfiguration));
-
-            if (getLog().isDebugEnabled()) {
-                getLog().debug("starter jar: using local dir: " + localDir); // NOI18N
-            }
-
-            if (localDir.exists()) {
-                if (!localDir.canRead()) {
-                    throw new IOException("cannot read local dir: " + localDir);                                     // NOI18N
-                }
-            } else {
-                if (getLog().isWarnEnabled()) {
-                    getLog().warn(
-                        "starter jar: the local dir is not present and will be created, thus jars cannot be added: " // NOI18N
-                                + localDir);
-                }
-
-                if (!localDir.mkdirs()) {
-                    throw new IOException("cannot create local dir: " + localDir); // NOI18N
-                }
-            }
-        } catch (final IOException e) {
-            final String message = "illegal local dir: " + this.getLocalDirectory(localConfiguration); // NOI18N
-            getLog().error(message, e);
-
-            throw new MojoExecutionException(message, e);
-        }
+        final File localDir = this.generateLocalDir(localConfiguration);
 
         final List<String> localFileNames;
         if (localConfiguration.getJarNames() == null) {
@@ -441,19 +413,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             localFileNames = new ArrayList<String>(Arrays.asList(localConfiguration.getJarNames()));
         }
 
-        final File[] localJars = localDir.listFiles(new FileFilter() {
-
-                    @Override
-                    public boolean accept(final File file) {
-                        if (!file.isFile()) {
-                            return false;
-                        } else if (localFileNames == null) {
-                            return file.getName().toLowerCase().endsWith(".jar"); // NOI18N
-                        } else {
-                            return localFileNames.remove(file.getName());
-                        }
-                    }
-                });
+        final File[] localJars = this.getLocalJars(localDir, localFileNames);
 
         if ((localFileNames != null) && !localFileNames.isEmpty()) {
             final StringBuilder sb = new StringBuilder();
@@ -662,9 +622,37 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 getLog().debug("starter jnlp: using local base: " + localBase); // NOI18N
             }
 
-            for (final String name : localConfiguration.getJarNames()) {
+            final List<String> localFileNames;
+            if (localConfiguration.getJarNames() == null) {
+                localFileNames = null;
+            } else {
+                localFileNames = new ArrayList<String>(Arrays.asList(localConfiguration.getJarNames()));
+            }
+
+            final File localDir = this.generateLocalDir(localConfiguration);
+
+            // WARNING: THis will modify the localFileNames list!!!!!1111!!!
+            final File[] localJars = this.getLocalJars(localDir, localFileNames);
+
+            if ((localFileNames != null) && !localFileNames.isEmpty()) {
+                final StringBuilder sb = new StringBuilder();
+                for (final String s : localFileNames) {
+                    sb.append(s).append(", ");
+                }
+                sb.delete(sb.length() - 2, sb.length());
+
+                getLog().warn(
+                    "The following jars are not included in the starter classpath, because they are not present: " // NOI18N
+                            + sb.toString());
+            }
+
+            for (final File localJarFile : localJars) {
+                if (!isSigned(localJarFile)) {
+                    signJar(localJarFile);
+                }
+
                 final Jar jar = objectFactory.createJar();
-                jar.setHref(localBase + name);
+                jar.setHref(localBase + localJarFile.getName());
 
                 resourceList.add(jar);
             }
@@ -1710,6 +1698,49 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * DOCUMENT ME!
      *
+     * @param   localConfiguration  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  MojoExecutionException  DOCUMENT ME!
+     */
+    private File generateLocalDir(final LocalConfiguration localConfiguration) throws MojoExecutionException {
+        final File localDir;
+        try {
+            localDir = new File(generateStructure() + File.separator + getLocalDirectory(localConfiguration));
+
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("starter jar: using local dir: " + localDir); // NOI18N
+            }
+
+            if (localDir.exists()) {
+                if (!localDir.canRead()) {
+                    throw new IOException("cannot read local dir: " + localDir);                                     // NOI18N
+                }
+            } else {
+                if (getLog().isWarnEnabled()) {
+                    getLog().warn(
+                        "starter jar: the local dir is not present and will be created, thus jars cannot be added: " // NOI18N
+                                + localDir);
+                }
+
+                if (!localDir.mkdirs()) {
+                    throw new IOException("cannot create local dir: " + localDir); // NOI18N
+                }
+            }
+
+            return localDir;
+        } catch (final IOException e) {
+            final String message = "illegal local dir: " + this.getLocalDirectory(localConfiguration); // NOI18N
+            getLog().error(message, e);
+
+            throw new MojoExecutionException(message, e);
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
      * @param   accountExtension  DOCUMENT ME!
      *
      * @return  DOCUMENT ME!
@@ -1978,5 +2009,31 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         return this.accountExtension;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   localDir        DOCUMENT ME!
+     * @param   localFileNames  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    private File[] getLocalJars(final File localDir, final List<String> localFileNames) {
+        final File[] localJars = localDir.listFiles(new FileFilter() {
+
+                    @Override
+                    public boolean accept(final File file) {
+                        if (!file.isFile()) {
+                            return false;
+                        } else if (localFileNames == null) {
+                            return file.getName().toLowerCase().endsWith(".jar"); // NOI18N
+                        } else {
+                            return localFileNames.remove(file.getName());
+                        }
+                    }
+                });
+
+        return localJars;
     }
 }
