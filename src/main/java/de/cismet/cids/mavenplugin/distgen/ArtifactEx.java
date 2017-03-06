@@ -30,10 +30,24 @@ public final class ArtifactEx {
     private final transient DependencyEx dependencyEx;
 
     private transient File classPathJar;
+    
+    /**
+     * The name is totally missleading! This is the dependency list of <strong>additional</strong> 
+     * dependencies (thier use is striongly discouraged)!
+     */
+    @Deprecated
     private transient File extendedClassPathJar;
+    
     private transient File starterJar;
     private transient Jnlp classPathJnlp;
+    
+    /**
+     * The name is totally missleading (Ex vs Extension vs Extended)! This is the dependency list of <strong>additional</strong> 
+     * dependencies (thier use is striongly discouraged)!
+     */
+    @Deprecated
     private transient Jnlp extendedClassPathJnlp;
+    
     private transient Jnlp starterJnlp;
     private transient DependencyNode dependencyTreeRoot;
     private transient MavenProject virtualProject;
@@ -85,6 +99,7 @@ public final class ArtifactEx {
      *
      * @return  DOCUMENT ME!
      */
+    @Deprecated
     public MavenProject getVirtualProject() {
         return virtualProject;
     }
@@ -94,6 +109,7 @@ public final class ArtifactEx {
      *
      * @param  virtualProject  DOCUMENT ME!
      */
+    @Deprecated
     public void setVirtualProject(final MavenProject virtualProject) {
         this.virtualProject = virtualProject;
     }
@@ -175,6 +191,7 @@ public final class ArtifactEx {
      *
      * @return  DOCUMENT ME!
      */
+    @Deprecated
     public File getExtendedClassPathJar() {
         return extendedClassPathJar;
     }
@@ -183,7 +200,9 @@ public final class ArtifactEx {
      * DOCUMENT ME!
      *
      * @param  extendedClassPathJar  DOCUMENT ME!
+     * @deprecated 
      */
+    @Deprecated
     public void setExtendedClassPathJar(final File extendedClassPathJar) {
         this.extendedClassPathJar = extendedClassPathJar;
     }
@@ -191,8 +210,10 @@ public final class ArtifactEx {
     /**
      * DOCUMENT ME!
      *
+     * @deprecated
      * @return  DOCUMENT ME!
      */
+    @Deprecated
     public Jnlp getExtendedClassPathJnlp() {
         return extendedClassPathJnlp;
     }
@@ -202,6 +223,7 @@ public final class ArtifactEx {
      *
      * @param  extendedClassPathJnlp  DOCUMENT ME!
      */
+    @Deprecated
     public void setExtendedClassPathJnlp(final Jnlp extendedClassPathJnlp) {
         this.extendedClassPathJnlp = extendedClassPathJnlp;
     }

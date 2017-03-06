@@ -119,7 +119,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      *
      * @parameter  expression="${cids.generate-lib.sign}" default-value="true"
      * @required   false
+     * @deprecasted JAR Signing is totally broken
      */
+    @Deprecated
     private transient Boolean sign;
 
     /**
@@ -129,7 +131,9 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      *
      * @parameter  expression="${cids.generate-lib.checkSignature}" default-value="true"
      * @required   false
+     * @deprecasted JAR Signing is totally broken
      */
+    @Deprecated
     private transient Boolean checkSignature;
 
     /**
@@ -884,6 +888,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      *
      * @throws  IllegalArgumentException  DOCUMENT ME!
      */
+    @Deprecated
     private void signJar(final File toSign) {
         if (toSign == null) {
             throw new IllegalArgumentException("toSign must not be null"); // NOI18N
@@ -974,6 +979,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      *
      * @throws  IllegalArgumentException  if the given file is <code>null</code>
      */
+    @Deprecated
     private boolean isSigned(final File toSign) {
         if (toSign == null) {
             throw new IllegalArgumentException("toSign file must not be null"); // NOI18N

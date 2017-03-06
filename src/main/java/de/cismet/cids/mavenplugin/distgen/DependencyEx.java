@@ -25,9 +25,19 @@ public final class DependencyEx extends Dependency {
 
     private transient boolean generateJnlp = true;
 
+    @Deprecated
     private transient Dependency[] additionalDependencies;
 
     private transient StarterConfiguration starterConfiguration;
+    
+    /**
+     * <p>If true, Classpath-JAR and Classpath-JNLP will point to <strong>absolute</strong>
+     * jar locations in maven repository.</p>
+     * <p>If false, Classpath-JAR and Classpath-JNLP will point to lib/int and lib/ext directories
+     * <strong>relative</strong> to cidsDistributionDirectory.
+     * 
+     */
+    private transient boolean classpathFromMavenRepo = true;
 
     //~ Constructors -----------------------------------------------------------
 
@@ -149,5 +159,24 @@ public final class DependencyEx extends Dependency {
      */
     public void setStarterConfiguration(final StarterConfiguration starterConfiguration) {
         this.starterConfiguration = starterConfiguration;
+    } 
+
+    /**
+     * Get the value of ClasspathFromMavenRepo
+     *
+     * @return the value of ClasspathFromMavenRepo
+     */
+    public boolean isClasspathFromMavenRepo() {
+        return classpathFromMavenRepo;
     }
+
+    /**
+     * Set the value of ClasspathFromMavenRepo
+     *
+     * @param ClasspathFromMavenRepo new value of ClasspathFromMavenRepo
+     */
+    public void setClasspathFromMavenRepo(boolean ClasspathFromMavenRepo) {
+        this.classpathFromMavenRepo = ClasspathFromMavenRepo;
+    }
+
 }
