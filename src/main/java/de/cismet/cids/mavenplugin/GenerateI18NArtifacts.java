@@ -47,7 +47,7 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
     /**
      * Whether to skip the execution of this mojo.
      *
-     * @parameter  expression="${cids.generate-i18n.skip}" default-value="false"
+     * @parameter  property="cids.generate-i18n.skip}" default-value="false"
      * @required   false
      */
     private transient Boolean skip;
@@ -55,7 +55,7 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
     /**
      * The <code>default.i18n.locale</code> property.
      *
-     * @parameter  expression="${cids.default.i18n.locale}"
+     * @parameter  property="cids.default.i18n.locale"
      * @required   false
      * @readonly   true
      */
@@ -64,7 +64,7 @@ public final class GenerateI18NArtifacts extends AbstractCidsMojo {
     /**
      * The <code>default.i18n.inputDirectory</code> property.
      *
-     * @parameter  expression="${cids.default.i18n.inputDirectory}"
+     * @parameter  property="cids.default.i18n.inputDirectory"
      * @required   true
      */
     private transient File inputDirectory;

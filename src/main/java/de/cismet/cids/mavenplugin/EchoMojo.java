@@ -26,32 +26,32 @@ public final class EchoMojo extends AbstractMojo {
     /**
      * Whether to skip the execution of this mojo.
      *
-     * @parameter  expression="${de.cismet.cids.echo.skip}" default-value="false"
+     * @parameter  property="de.cismet.cids.echo.skip" default-value="false"
      */
     private transient Boolean skip;
 
     /**
      * Display a debug message.
      *
-     * @parameter  expression="${de.cismet.cids.echo.debug}"
+     * @parameter  property="de.cismet.cids.echo.debug"
      */
     private transient String debug;
     /**
      * Display a info message.
      *
-     * @parameter  expression="${de.cismet.cids.echo.info}"
+     * @parameter  property="de.cismet.cids.echo.info"
      */
     private transient String info;
     /**
      * Display a warn message.
      *
-     * @parameter  expression="${de.cismet.cids.echo.warn}"
+     * @parameter  property="de.cismet.cids.echo.warn"
      */
     private transient String warn;
     /**
      * Display a error message.
      *
-     * @parameter  expression="${de.cismet.cids.echo.error}"
+     * @parameter  property="de.cismet.cids.echo.error"
      */
     private transient String error;
 

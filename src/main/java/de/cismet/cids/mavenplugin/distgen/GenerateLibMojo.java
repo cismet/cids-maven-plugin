@@ -99,6 +99,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
     public static final String CLASSPATH_DIR = "classpath"; // NOI18N
 
+    public static final String INT_GROUPD_ID = "de.cismet"; // NOI18N
+
     public static final String CLASSIFIER_CLASSPATH = "classpath"; // NOI18N
     public static final String CLASSIFIER_STARTER = "starter";     // NOI18N
     public static final String FILE_EXT_JAR = "jar";               // NOI18N
@@ -109,7 +111,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * Whether to skip the execution of this mojo.
      *
-     * @parameter  expression="${cids.generate-lib.skip}" default-value="false"
+     * @parameter  property="cids.generate-lib.skip" default-value="false"
      * @required   false
      */
     private transient Boolean skip;
@@ -117,29 +119,27 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * Whether to sign artifacts used to create the distribution.
      *
-     * @parameter  expression="${cids.generate-lib.sign}" default-value="true"
-     * @required   false
-     * @deprecasted JAR Signing is totally broken
+     * @parameter    property="cids.generate-lib.sign" default-value="true"
+     * @required     false
+     * @deprecasted  JAR Signing is totally broken
      */
-    @Deprecated
-    private transient Boolean sign;
+    @Deprecated private transient Boolean sign;
 
     /**
      * Whether to check artifacts if they are signed or not. If checkSignature is <code>false</code> and sign is <code>
      * true</code> jars will be signed regardless of they current signature. if both checkSignature and sign are <code>
      * true</code> jars will only be signed if they have not been signed with the set certificate before.
      *
-     * @parameter  expression="${cids.generate-lib.checkSignature}" default-value="true"
-     * @required   false
-     * @deprecasted JAR Signing is totally broken
+     * @parameter    property="cids.generate-lib.checkSignature" default-value="true"
+     * @required     false
+     * @deprecasted  JAR Signing is totally broken
      */
-    @Deprecated
-    private transient Boolean checkSignature;
+    @Deprecated private transient Boolean checkSignature;
 
     /**
      * Controls whether specific messages are presented to the user or not.
      *
-     * @parameter  expression="${cids.generate-lib.verbose}" default-value="false"
+     * @parameter  property="cids.generate-lib.verbose" default-value="false"
      * @required   false
      */
     private transient Boolean verbose;
@@ -150,7 +150,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * <br/>
      * E.g. outputDirectory = /home/cismet/cidsDistribution, codebase = http://www.cismet.de/cidsDistribution
      *
-     * @parameter  expression="${cids.generate-lib.outputDirectory}" default-value="target/generate-lib-out"
+     * @parameter  property="cids.generate-lib.outputDirectory" default-value="target/generate-lib-out"
      * @required   true
      */
     private transient File outputDirectory;
@@ -158,14 +158,14 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * The vendor generating the lib structure.
      *
-     * @parameter  expression="${cids.generate-lib.vendor}
+     * @parameter  property="cids.generate-lib.vendor"
      */
     private transient String vendor;
 
     /**
      * The homepage of the vendor generating the lib structure.
      *
-     * @parameter  expression="${cids.generate-lib.homepage}
+     * @parameter  property="cids.generate-lib.homepage"
      */
     private transient String homepage;
 
@@ -174,7 +174,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * hosted distribution and will be used in <code>jnlp</code> file generation. If the parameter is not provided,
      * <code>classpath-jnlp</code> files won't be generated.
      *
-     * @parameter  expression="${cids.generate-lib.codebase}"
+     * @parameter  property="cids.generate-lib.codebase"
      * @required   false
      */
     private transient URL codebase;
@@ -187,15 +187,27 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * provided or none of them are absolute <code>classpath-jnlps</code> will not be generated. If the generation shall
      * be done in <code>legacy</code> mode the value of this parameter will be ignored
      *
-     * @parameter  expression="${cids.generate-lib.m2codebase}" default-value="lib/m2"
+     * @parameter  property="cids.generate-lib.m2codebase" default-value="lib/m2"
      * @required   false
      */
     private transient String m2codebase;
 
     /**
+     * <p>If true, Classpath-JAR and Classpath-JNLP will point to <strong>absolute</strong> jarFile locations in maven
+     * repository.</p>
+     *
+     * <p>If false, Classpath-JAR and Classpath-JNLP will point to lib/int and lib/ext directories <strong>
+     * relative</strong> to cidsDistributionDirectory.</p>
+     *
+     * @parameter  property="cids.generate-lib.classpathFromMavenRepo" default-value="true"
+     * @required   false
+     */
+    private transient boolean classpathFromMavenRepo;
+
+    /**
      * DOCUMENT ME!
      *
-     * @parameter  expression="${cids.generate-lib.accountExtension}"
+     * @parameter  property="cids.generate-lib.accountExtension"
      * @required   true
      */
     private transient String accountExtension;
@@ -210,7 +222,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * The Maven Session Object.
      *
-     * @parameter  expression="${session}"
+     * @parameter  property="session"
      * @required
      * @readonly
      */
@@ -273,7 +285,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         for (final ArtifactEx toProcess : ordered) {
             getLog().info("processing dependency extension "
-                        + (ordered.size() - processed.size() + 1) + "/"
+                        + (processed.size() + 1) + "/"
                         + ordered.size() + ": " + toProcess.getArtifact().getArtifactId());
             processArtifact(toProcess, processed);
         }
@@ -403,7 +415,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 }
             }
         } catch (final IOException e) {
-            final String message = "illegal local dir: " + getLocalDirectory(localConfiguration); // NOI18N
+            final String message = "illegal local dir: " + this.getLocalDirectory(localConfiguration); // NOI18N
             getLog().error(message, e);
 
             throw new MojoExecutionException(message, e);
@@ -444,21 +456,47 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         final StringBuilder classpath = new StringBuilder();
 
-        for (final File localJar : localJars) {
-            if (!isSigned(localJar)) {
-                signJar(localJar);
+        for (final File localJarFile : localJars) {
+            if (!isSigned(localJarFile)) {
+                signJar(localJarFile);
             }
 
-            classpath.append(getManifestCompatiblePath(localJar.getAbsolutePath())).append(' ');
+            if (classpathFromMavenRepo) {
+                classpath.append(getManifestCompatiblePath(localJarFile.getAbsolutePath())).append(' ');
+            } else {
+                classpath.append("../")
+                        .append(this.getLocalDirectory(localConfiguration))
+                        .append('/')
+                        .append(localJarFile.getName())
+                        .append(' ');
+            }
         }
 
-        if (artifactEx.getExtendedClassPathJar() == null) {
-            classpath.append(getManifestCompatiblePath(artifactEx.getClassPathJar().getAbsolutePath()));
+        if (artifactEx.getExtendedClassPathJar() != null) {
+            if (classpathFromMavenRepo) {
+                classpath.append(getManifestCompatiblePath(artifactEx.getExtendedClassPathJar().getAbsolutePath()));
+            } else {
+                classpath.append("../")
+                        .append(CLASSPATH_DIR)
+                        .append(accountExtension)
+                        .append('/')
+                        .append(artifactEx.getExtendedClassPathJar().getName())
+                        .append(' ');
+            }
         } else {
-            classpath.append(getManifestCompatiblePath(artifactEx.getExtendedClassPathJar().getAbsolutePath()));
+            if (classpathFromMavenRepo) {
+                classpath.append(getManifestCompatiblePath(artifactEx.getClassPathJar().getAbsolutePath()));
+            } else {
+                classpath.append("../")
+                        .append(CLASSPATH_DIR)
+                        .append(accountExtension)
+                        .append('/')
+                        .append(artifactEx.getClassPathJar().getName())
+                        .append(' ');
+            }
         }
 
-        // Generate Manifest and jar File
+        // Generate Manifest and jarFile File
         final Manifest manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
         manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
@@ -477,11 +515,11 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final String jarName = artifactEx.getArtifact().getArtifactId() + "-"                                    // NOI18N
                         + artifactEx.getArtifact().getBaseVersion() + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JAR; // NOI18N;
 
-            // write the jar file
+            // write the jarFile file
             final File jar = getOutputFile(jarName, starter.getStarterAlias());
             target = new JarOutputStream(new FileOutputStream(jar), manifest);
 
-            // close the stream to be able to sign the jar
+            // close the stream to be able to sign the jarFile
             target.close();
             if (!isSigned(jar)) {
                 signJar(jar);
@@ -608,7 +646,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
         }
 
-        // add the extension to the main classpath jar
+        // add the extension to the main classpath jarFile
         final Extension extension = objectFactory.createExtension();
         if (artifactEx.getExtendedClassPathJnlp() == null) {
             extension.setHref(artifactEx.getClassPathJnlp().getHref());
@@ -796,11 +834,16 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
 
         final StringBuilder classpath;
-        // we don't append the parent artifact's file path if the artifact is virtual
-        if (virtual) {
+        // we don't append the parent artifact's file path if the artifact is virtual or just a pom artifact!
+        if (virtual || parentArtifact.getType().equalsIgnoreCase("pom")) {
             classpath = new StringBuilder();
         } else {
-            classpath = new StringBuilder(getManifestCompatiblePath(parentArtifact.getFile().getAbsolutePath()));
+            if (classpathFromMavenRepo) {
+                classpath = new StringBuilder(getManifestCompatiblePath(parentArtifact.getFile().getAbsolutePath()));
+            } else {
+                classpath = new StringBuilder("../");
+                classpath.append("../").append(LIB_INT_DIR).append('/').append(parentArtifact.getFile().getName());
+            }
             classpath.append(' ');
         }
 
@@ -810,7 +853,17 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         } else {
             filter = new ChildDependencyFilter(child);
             getLog().info("appending child classpath JAR: " + child.getClassPathJar().getAbsolutePath());
-            classpath.append(getManifestCompatiblePath(child.getClassPathJar().getAbsolutePath())).append(' ');
+
+            if (classpathFromMavenRepo) {
+                classpath.append(getManifestCompatiblePath(child.getClassPathJar().getAbsolutePath()));
+            } else {
+                classpath.append("../")
+                        .append(CLASSPATH_DIR)
+                        .append(accountExtension)
+                        .append('/')
+                        .append(child.getClassPathJar().getName());
+            }
+            classpath.append(' ');
         }
 
         JarOutputStream target = null;
@@ -822,17 +875,29 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 resolved = resolveArtifacts(parentArtifact, Artifact.SCOPE_RUNTIME, filter);
             }
 
-            for (final Artifact dep : resolved) {
-                if (!isSigned(dep.getFile())) {
-                    signJar(dep.getFile());
+            for (final Artifact dependency : resolved) {
+                if (!isSigned(dependency.getFile())) {
+                    signJar(dependency.getFile());
                 }
                 if (getLog().isDebugEnabled()) {
-                    getLog().debug(dep.getFile().getAbsolutePath());
+                    getLog().debug(dependency.getFile().getAbsolutePath());
                 }
-                classpath.append(getManifestCompatiblePath(dep.getFile().getAbsolutePath())).append(' ');
+
+                if (classpathFromMavenRepo) {
+                    classpath.append(getManifestCompatiblePath(dependency.getFile().getAbsolutePath()));
+                } else {
+                    classpath.append("../");
+                    if (dependency.getGroupId().startsWith(INT_GROUPD_ID)) {
+                        classpath.append(LIB_INT_DIR);
+                    } else {
+                        classpath.append(LIB_EXT_DIR);
+                    }
+                    classpath.append('/').append(dependency.getFile().getName());
+                }
+                classpath.append(' ');
             }
 
-            // Generate Manifest and jar File
+            // Generate Manifest and jarFile File
             final Manifest manifest = new Manifest();
             manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");                    // NOI18N
             manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
@@ -847,22 +912,22 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final String jarname = parentArtifact.getArtifactId() + "-" + parentArtifact.getBaseVersion() // NOI18N
                         + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JAR;                                // NOI18N
 
-            // write the jar file
-            final File jar = getOutputFile(jarname, null);
-            target = new JarOutputStream(new FileOutputStream(jar), manifest);
+            // write the jarFile file
+            final File jarFile = getOutputFile(jarname, null);
+            target = new JarOutputStream(new FileOutputStream(jarFile), manifest);
 
-            // close the stream to be able to sign the jar
+            // close the stream to be able to sign the jarFile
             target.close();
 
-            if (!isSigned(jar)) {
-                signJar(jar);
+            if (!isSigned(jarFile)) {
+                signJar(jarFile);
             }
 
             if (getLog().isInfoEnabled()) {
-                getLog().info("generated classpath jar: " + jar); // NOI18N
+                getLog().info("generated classpath jar: " + jarFile); // NOI18N
             }
 
-            return jar;
+            return jarFile;
         } catch (final Exception ex) {
             final String message = "cannot generate jar for artifact: " + parent + " || child: " + child; // NOI18N
             getLog().error(message, ex);
@@ -966,15 +1031,15 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     }
 
     /**
-     * No longer uses the maven jar plugin sign-verify implementation to check for validity of a signature because the
-     * plugin does not support checking for a particular signature. This implementation checks every single class or the
-     * given jar, but classes only, no other resources. It validates whether all classes have been signed with the
-     * cismet signature, defined via the <code>de.cismet.keystore.path</code> and <code>de.cismet.keystore.pass</code>
-     * properties.
+     * No longer uses the maven jarFile plugin sign-verify implementation to check for validity of a signature because
+     * the plugin does not support checking for a particular signature. This implementation checks every single class or
+     * the given jarFile, but classes only, no other resources. It validates whether all classes have been signed with
+     * the cismet signature, defined via the <code>de.cismet.keystore.path</code> and <code>
+     * de.cismet.keystore.pass</code> properties.
      *
-     * @param   toSign  the jar file to verify
+     * @param   toSign  the jarFile file to verify
      *
-     * @return  true if checkSignature is true and all class files of the given jar are signed with the cismet
+     * @return  true if checkSignature is true and all class files of the given jarFile are signed with the cismet
      *          signature, false in any other case
      *
      * @throws  IllegalArgumentException  if the given file is <code>null</code>

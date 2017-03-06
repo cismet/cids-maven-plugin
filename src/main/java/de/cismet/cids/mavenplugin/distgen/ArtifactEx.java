@@ -30,24 +30,22 @@ public final class ArtifactEx {
     private final transient DependencyEx dependencyEx;
 
     private transient File classPathJar;
-    
+
     /**
-     * The name is totally missleading! This is the dependency list of <strong>additional</strong> 
-     * dependencies (thier use is striongly discouraged)!
+     * The name is totally missleading! This is the dependency list of <strong>additional</strong> dependencies (thier
+     * use is striongly discouraged)!
      */
-    @Deprecated
-    private transient File extendedClassPathJar;
-    
+    @Deprecated private transient File extendedClassPathJar;
+
     private transient File starterJar;
     private transient Jnlp classPathJnlp;
-    
+
     /**
-     * The name is totally missleading (Ex vs Extension vs Extended)! This is the dependency list of <strong>additional</strong> 
-     * dependencies (thier use is striongly discouraged)!
+     * The name is totally missleading (Ex vs Extension vs Extended)! This is the dependency list of <strong>
+     * additional</strong> dependencies (thier use is striongly discouraged)!
      */
-    @Deprecated
-    private transient Jnlp extendedClassPathJnlp;
-    
+    @Deprecated private transient Jnlp extendedClassPathJnlp;
+
     private transient Jnlp starterJnlp;
     private transient DependencyNode dependencyTreeRoot;
     private transient MavenProject virtualProject;
@@ -199,8 +197,9 @@ public final class ArtifactEx {
     /**
      * DOCUMENT ME!
      *
-     * @param  extendedClassPathJar  DOCUMENT ME!
-     * @deprecated 
+     * @param       extendedClassPathJar  DOCUMENT ME!
+     *
+     * @deprecated  DOCUMENT ME!
      */
     @Deprecated
     public void setExtendedClassPathJar(final File extendedClassPathJar) {
@@ -210,8 +209,9 @@ public final class ArtifactEx {
     /**
      * DOCUMENT ME!
      *
-     * @deprecated
-     * @return  DOCUMENT ME!
+     * @return      DOCUMENT ME!
+     *
+     * @deprecated  DOCUMENT ME!
      */
     @Deprecated
     public Jnlp getExtendedClassPathJnlp() {

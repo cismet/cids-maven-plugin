@@ -41,7 +41,7 @@ public final class CreateDirectCpPropertyMojo extends AbstractMojo {
     /**
      * The enclosing maven project.
      *
-     * @parameter  expression="${project}"
+     * @parameter  property="project"
      * @required   true
      * @readonly   true
      */
@@ -49,21 +49,21 @@ public final class CreateDirectCpPropertyMojo extends AbstractMojo {
     /**
      * Whether to skip the execution of this mojo.
      *
-     * @parameter  expression="${de.cismet.cids.create-direct-cp-property.skip}" default-value="false"
+     * @parameter  property="de.cismet.cids.create-direct-cp-property.skip" default-value="false"
      * @required
      */
     private transient Boolean skip;
     /**
      * Whether to include system scope dependencies.
      *
-     * @parameter  expression="${de.cismet.cids.create-direct-cp-property.includeSystemScope}" default-value="false"
+     * @parameter  property="de.cismet.cids.create-direct-cp-property.includeSystemScope" default-value="false"
      * @required
      */
     private transient Boolean includeSystemScope;
     /**
      * Whether to include provided scope dependencies.
      *
-     * @parameter  expression="${de.cismet.cids.create-direct-cp-property.includeProvidedScope}" default-value="true"
+     * @parameter  property="de.cismet.cids.create-direct-cp-property.includeProvidedScope" default-value="true"
      * @required
      */
     private transient Boolean includeProvidedScope;

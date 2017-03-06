@@ -87,7 +87,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     /**
      * Location of the local repository.
      *
-     * @parameter  expression="${localRepository}"
+     * @parameter  property="localRepository"
      * @required   true
      * @readonly   true
      */
@@ -96,7 +96,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     /**
      * List of Remote Repositories used by the resolver.
      *
-     * @parameter  expression="${project.remoteArtifactRepositories}"
+     * @parameter  property="project.remoteArtifactRepositories"
      * @required   true
      * @readonly   true
      */
@@ -105,7 +105,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     /**
      * The enclosing maven project.
      *
-     * @parameter  expression="${project}"
+     * @parameter  property="project"
      * @required   true
      * @readonly   true
      */
@@ -139,7 +139,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     /**
      * Whether to skip the execution of this mojo.
      *
-     * @parameter  expression="${refsystem.reset.skip}" default-value="true"
+     * @parameter  property="refsystem.reset.skip" default-value="true"
      * @required   false
      * @readonly   true
      */

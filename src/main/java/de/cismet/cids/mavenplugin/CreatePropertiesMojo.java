@@ -38,7 +38,7 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
     /**
      * Whether to skip the execution of this mojo.
      *
-     * @parameter  expression="${de.cismet.cids.create-properties.skip}" default-value="false"
+     * @parameter  property="de.cismet.cids.create-properties.skip" default-value="false"
      * @required   false
      */
     private transient Boolean skip;
@@ -46,7 +46,7 @@ public class CreatePropertiesMojo extends AbstractCidsMojo {
     /**
      * The <code>de.cismet.cids.lib.local</code> property.
      *
-     * @parameter  expression="${de.cismet.cids.lib.local}"
+     * @parameter  property="de.cismet.cids.lib.local"
      * @required   false
      * @readonly   true
      */
