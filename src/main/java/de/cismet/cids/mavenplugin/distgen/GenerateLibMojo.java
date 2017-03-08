@@ -60,7 +60,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
-import java.util.zip.ZipEntry;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
@@ -92,7 +91,7 @@ import de.cismet.cids.mavenplugin.AbstractCidsMojo;
  * @phase                         prepare-package
  * @requiresDependencyResolution  runtime
  */
-// TODO: this class should be totally refactored as the design is awkward - NO SHIT SHERLOCK!
+// TODO: this class should be totally refactored as the design is awkward - NO SHIT SHERLOCK!!!!!111111111
 public class GenerateLibMojo extends AbstractCidsMojo {
 
     //~ Static fields/initializers ---------------------------------------------
@@ -102,8 +101,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     public static final String CLIENT_DIR = "client"; // NOI18N
 
     public static final String CLASSPATH_DIR = "classpath"; // NOI18N
-
-    public static final String INT_GROUPD_ID = "de.cismet"; // NOI18N
 
     public static final String CLASSIFIER_CLASSPATH = "classpath"; // NOI18N
     public static final String CLASSFIER_SECURITY = "security";
@@ -291,7 +288,11 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final List<ArtifactEx> ordered = determineProcessingOrder(accepted);
 
         if (getLog().isDebugEnabled()) {
-            getLog().debug("order: " + ordered); // NOI18N
+            for (final ArtifactEx artifactEx : ordered) {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug("order: " + artifactEx.getArtifact().getArtifactId()); // NOI18N
+                }
+            }
         }
 
         final List<ArtifactEx> processed = new ArrayList<ArtifactEx>(ordered.size());
@@ -1542,18 +1543,24 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     /**
      * DOCUMENT ME!
      *
-     * @param   artifacts  DOCUMENT ME!
+     * @param       artifacts  DOCUMENT ME!
      *
-     * @return  DOCUMENT ME!
+     * @return      DOCUMENT ME!
      *
-     * @throws  MojoExecutionException  DOCUMENT ME!
+     * @throws      MojoExecutionException  DOCUMENT ME!
+     *
+     * @deprecated  DO NOT MESS AROUND WITH THE DEPENDENCY ORDER!
      */
+    @Deprecated
     private List<ArtifactEx> determineProcessingOrder(final Set<ArtifactEx> artifacts) throws MojoExecutionException {
         final LinkedList<ArtifactEx> list = new LinkedList<ArtifactEx>();
         if (getLog().isDebugEnabled()) {
             getLog().debug("determineProcessingOrder for " + artifacts.size() + " ArtifactEx Artifacts");
         }
         for (final ArtifactEx artifactEx : artifacts) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("determineProcessingOrder for '" + artifactEx.getArtifact().getArtifactId() + "'");
+            }
             try {
                 final MavenProject artifactProject = resolveProject(artifactEx.getArtifact());
 
@@ -1578,7 +1585,8 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 }
 
                 if (getLog().isDebugEnabled()) {
-                    getLog().debug(insertionIndex + " is insertion index for artifact: " + artifactEx);
+                    getLog().debug(insertionIndex + " is insertion index for artifact: "
+                                + artifactEx.getArtifact().getArtifactId());
                 }
 
                 list.add(insertionIndex, artifactEx);

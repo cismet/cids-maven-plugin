@@ -38,6 +38,7 @@ import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.DependencyRequest;
+import org.eclipse.aether.resolution.DependencyResolutionException;
 import org.eclipse.aether.resolution.DependencyResult;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.filter.DependencyFilterUtils;
@@ -65,6 +66,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     public static final String LIB_DIR = "lib";     // NOI18N
     public static final String LIB_EXT_DIR = "ext"; // NOI18N
     public static final String LIB_INT_DIR = "int"; // NOI18N
+    public static final String INT_GROUPD_ID = "de.cismet"; // NOI18N
 
     //~ Instance fields --------------------------------------------------------
 
@@ -159,7 +161,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * Resolves the dependencies of the given artifact with the given scope. Uses a {@link ScopeArtifactFilter} with the
      * given scope to resolve the artifacts.
      *
-     * @param   artifact  the artifact whose dependencies shall be resolved
+     * @param   artifact  the artifact whose dependencies shall be resolvedArtifact
      * @param   scope     the scope applied to the resolve process
      *
      * @return  all the dependencies artifacts of the given artifact
@@ -168,12 +170,13 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *                                                                       artifacts cannot be created from the
      *                                                                       created maven project
      * @throws  InstallationException                                        if an artifact of the given artifact cannot
-     *                                                                       be resolved
+                                                                       be resolvedArtifact
      * @throws  IOException                                                  ArtifactNotFoundException if an artifact of
      *                                                                       the given artifact cannot be found
      * @throws  ProjectBuildingException                                     if no maven project can be build from the
      *                                                                       artifact information
      */
+    @Deprecated
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope)
             throws org.eclipse.aether.resolution.DependencyResolutionException,
                 InstallationException,
@@ -185,14 +188,14 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     /**
      * Resolves the dependencies of the given artifact with the given scope and the given filter.
      *
-     * @param   artifact  the artifact whose dependencies shall be resolved
+     * @param   artifact  the artifact whose dependencies shall be resolvedArtifact
      * @param   scope     the scope applied to the resolve process
      * @param   filter    the <code>ArtifactFilter</code> to apply
      *
      * @return  all the dependencies artifacts of the given artifact
      *
-     * @throws  org.eclipse.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
-     *                                                                       the given project for any reason
+     * @throws  org.eclipse.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolvedArtifact for
+                                                                       the given project for any reason
      * @throws  InstallationException                                        if a temporary artifact cannot be installed
      *                                                                       when dealing with virtual artifacts
      * @throws  IOException                                                  if a temporary pom cannot be written when
@@ -203,6 +206,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @see     #resolveArtifacts(org.apache.maven.project.MavenProject, java.lang.String,
      *          org.apache.maven.artifact.resolver.filter.ArtifactFilter)
      */
+    @Deprecated
     protected Set<Artifact> resolveArtifacts(final Artifact artifact, final String scope, final ArtifactFilter filter)
             throws org.eclipse.aether.resolution.DependencyResolutionException,
                 InstallationException,
@@ -220,65 +224,66 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     /**
      * Resolves the dependencies of the given project with the given scope and the given filter.
      *
-     * @param   artifactProject  the project who's dependencies shall be resolved
+     * @param   artifactProject  the project who's dependencies shall be resolvedArtifact
      * @param   scope            the scope applied to the resolve process
      * @param   filter           the <code>ArtifactFilter</code> to apply
      *
      * @return  all the dependencies artifacts of the given project
      *
-     * @throws  org.eclipse.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolved for
-     *                                                                       the given project for any reason
-     * @throws  InstallationException                                        if a temporary artifact cannot be installed
-     *                                                                       when dealing with virtual artifacts
-     * @throws  IOException                                                  if a temporary pom cannot be written when
-     *                                                                       dealing with virtual artifacts
+     * @throws  DependencyResolutionException  org.eclipse.aether.resolution.DependencyResolutionException if the
+                                         dependencies cannot be resolvedArtifact for the given project for any reason
+     * @throws  InstallationException          if a temporary artifact cannot be installed when dealing with virtual
+     *                                         artifacts
+     * @throws  IOException                    if a temporary pom cannot be written when dealing with virtual artifacts
      */
     protected Set<Artifact> resolveArtifacts(final MavenProject artifactProject,
             final String scope,
-            final ArtifactFilter filter) throws org.eclipse.aether.resolution.DependencyResolutionException,
-        InstallationException,
-        IOException {
-        org.eclipse.aether.artifact.Artifact tmpArtifact = new DefaultArtifact(
+            final ArtifactFilter filter) throws DependencyResolutionException, InstallationException, IOException {
+        
+        /*final Set<Artifact> artifacts = this.project.getArtifacts();
+        for (final Artifact artifact : artifacts) {
+            getLog().info(artifact.toString());
+        }*/
+
+        @Deprecated
+        org.eclipse.aether.artifact.Artifact deploymentArtifact = new DefaultArtifact(
                 artifactProject.getGroupId(),
                 artifactProject.getArtifactId(),
                 artifactProject.getPackaging(),
                 artifactProject.getVersion());
 
-        if (getLog().isDebugEnabled()) {
-            getLog().debug("resolving artifacts for: " + tmpArtifact); // NOI18N
-        }
+        getLog().info("resolving artifacts for deployment Artifact: " + deploymentArtifact); // NOI18N
 
         // first we check if the artifact that we handle is actually present
         final ArtifactRequest artifactRequest = new ArtifactRequest();
-        artifactRequest.setArtifact(tmpArtifact);
+        artifactRequest.setArtifact(deploymentArtifact);
         artifactRequest.setRepositories(projectRepos);
 
+        // WTF?! FIXME: GET RID OF THIS 'VIRTUAL' STUFF! -----------------------
         boolean virtual;
         try {
             final ArtifactResult artifactResult = repoSystem.resolveArtifact(repoSession, artifactRequest);
-
             virtual = artifactResult.getArtifact() == null;
         } catch (final org.eclipse.aether.resolution.ArtifactResolutionException ex) {
-            if (getLog().isDebugEnabled()) {
-                getLog().debug("artifact not resolved, assuming virtual artifact: " + artifactProject, ex);
-            }
-
+            getLog().warn("artifact not resolved, assuming virtual artifact: " + artifactProject, ex);
             virtual = true;
         }
+        // WTF?! FIXME: GET RID OF THIS 'VIRTUAL' STUFF! -----------------------
 
         try {
+            // WTF?! FIXME: GET RID OF THIS 'VIRTUAL' STUFF! -----------------------
             // so called virtual artifacts have to be deployed temporarily
             if (virtual) {
                 // we deploy a pom artifact for the virtual project
-                tmpArtifact = new DefaultArtifact(
-                        tmpArtifact.getGroupId(),
-                        tmpArtifact.getArtifactId(),
+                deploymentArtifact = new DefaultArtifact(
+                        deploymentArtifact.getGroupId(),
+                        deploymentArtifact.getArtifactId(),
                         "pom", // NOI18N
-                        tmpArtifact.getVersion());
+                        deploymentArtifact.getVersion());
                 final File targetDir = new File(project.getBasedir(), "target"); // NOI18N
                 targetDir.mkdir();
                 final File tmpPom = new File(targetDir, "tmp-pom.xml"); // NOI18N
-                tmpArtifact = tmpArtifact.setFile(tmpPom);
+                deploymentArtifact = deploymentArtifact.setFile(tmpPom);
 
                 final MavenXpp3Writer pomWriter = new MavenXpp3Writer();
                 final Model mavenModel = artifactProject.getModel();
@@ -286,14 +291,16 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
                 pomWriter.write(new FileWriter(tmpPom), mavenModel);
 
                 final InstallRequest installRequest = new InstallRequest();
-                installRequest.addArtifact(tmpArtifact);
+                installRequest.addArtifact(deploymentArtifact);
 
                 repoSystem.install(repoSession, installRequest);
             }
+            // WTF?! FIXME: GET RID OF THIS 'VIRTUAL' STUFF! -----------------------
 
             // we collect all dependency artifacts and filter them afterwards
+            // WHAT? ??? !!!!
             final CollectRequest collectRequest = new CollectRequest();
-            collectRequest.setRoot(new Dependency(tmpArtifact, JavaScopes.COMPILE));
+            collectRequest.setRoot(new Dependency(deploymentArtifact, JavaScopes.COMPILE));
             collectRequest.setRepositories(projectRepos);
 
             final DependencyFilter classpathFilter = DependencyFilterUtils.classpathFilter(scope);
@@ -303,23 +310,46 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
 
             final List<ArtifactResult> artifactResults = dependencyResult.getArtifactResults();
 
-            final Set<Artifact> result = new LinkedHashSet<Artifact>();
-            final Artifact tmpMvnArtifact = RepositoryUtils.toArtifact(tmpArtifact);
+            final LinkedHashSet<Artifact> resolvedExtArtifacts = new LinkedHashSet<Artifact>();
+            final LinkedHashSet<Artifact> resolvedIntArtifacts = new LinkedHashSet<Artifact>();
+            final LinkedHashSet<Artifact> resolvedArtifacts = new LinkedHashSet<Artifact>();
+
+            /**
+             * RepositoryUtils
+             * This is an internal utility class that is only public for technical reasons,
+             * it is not part of the public API. In particular, this class can be changed or
+             * deleted without prior notice.
+             */
+            final Artifact tmpMvnArtifact = RepositoryUtils.toArtifact(deploymentArtifact);
+
             for (final ArtifactResult ar : artifactResults) {
-                final Artifact resolved = RepositoryUtils.toArtifact(ar.getArtifact());
-                if (!resolved.equals(tmpMvnArtifact) && filter.include(resolved)) {
-                    result.add(resolved);
+                final Artifact resolvedArtifact = RepositoryUtils.toArtifact(ar.getArtifact());
+                if (!resolvedArtifact.equals(tmpMvnArtifact) && filter.include(resolvedArtifact)) {
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug("resolved dependency: " + resolvedArtifact.getArtifactId());
+                    }
+                    
+                    // WARNING: PLACE CIDS ARTIFACTS FIRST!!!!!!!!!!
+                    if (resolvedArtifact.getGroupId().startsWith(INT_GROUPD_ID)) {
+                        resolvedIntArtifacts.add(resolvedArtifact);
+                    } else {
+                        resolvedExtArtifacts.add(resolvedArtifact);
+                    } 
                 }
             }
+            
+            resolvedArtifacts.addAll(resolvedIntArtifacts);
+            resolvedArtifacts.addAll(resolvedExtArtifacts);
 
             if (getLog().isDebugEnabled()) {
-                getLog().debug("resolved artifacts: " + result.toString()); // NOI18N
+                getLog().debug("resolved artifacts: " + resolvedArtifacts.toString()); // NOI18N
             }
 
-            return result;
+            return resolvedArtifacts;
         } finally {
+            // WTF?! FIXME: GET RID OF THIS 'VIRTUAL' STUFF! -----------------------
             if (virtual) {
-                final Artifact virtualArtifact = RepositoryUtils.toArtifact(tmpArtifact);
+                final Artifact virtualArtifact = RepositoryUtils.toArtifact(deploymentArtifact);
                 final File artifactFile = new File(local.getBasedir(), local.pathOf(virtualArtifact));
                 final File toDelete = artifactFile.getParentFile().getParentFile();
 
@@ -331,6 +361,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
                     }
                 }
             }
+            // WTF?! FIXME: GET RID OF THIS 'VIRTUAL' STUFF! -----------------------
         }
     }
 
