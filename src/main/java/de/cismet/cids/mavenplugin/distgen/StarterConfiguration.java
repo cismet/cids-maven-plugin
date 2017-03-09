@@ -32,7 +32,7 @@ public final class StarterConfiguration {
 
     private transient Properties properties;
 
-    @Deprecated private transient String starterAlias;
+    private transient String starterAlias;
 
     //~ Methods ----------------------------------------------------------------
 
@@ -165,7 +165,6 @@ public final class StarterConfiguration {
      *
      * @return  DOCUMENT ME!
      */
-    @Deprecated
     public String getStarterAlias() {
         return starterAlias;
     }
@@ -175,7 +174,6 @@ public final class StarterConfiguration {
      *
      * @param  starterAlias  DOCUMENT ME!
      */
-    @Deprecated
     public void setStarterAlias(final String starterAlias) {
         this.starterAlias = starterAlias;
     }

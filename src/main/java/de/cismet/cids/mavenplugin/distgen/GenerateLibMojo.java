@@ -176,7 +176,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * hosted distribution and will be used in <code>jnlp</code> file generation. If the parameter is not provided,
      * <code>classpath-jnlp</code> files won't be generated.
      *
-     * @parameter  property="cids.generate-lib.codebase"
+     * @parameter  property="cids.generate-lib.codebase" default-value="http://localhost:3030"
      * @required   false
      */
     private transient URL codebase;
@@ -503,12 +503,14 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
 
             if (getLog().isInfoEnabled()) {
-                getLog().info("generated starter jar: " + starterJarFile); // NOI18N
+                getLog().info("generated starter jar '" + starterJarFile 
+                        + "' for depolyment artifact '" 
+                        + artifactEx.getArtifact().getArtifactId() + "'"); // NOI18N
             }
 
             return starterJarFile;
         } catch (final Exception ex) {
-            final String message = "cannot generate starter jar for artifact: " + artifactEx; // NOI18N
+            final String message = "cannot generate starter jar for artifact '" + artifactEx + "'"; // NOI18N
             getLog().error(message, ex);
 
             throw new MojoExecutionException(message, ex);
@@ -564,7 +566,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             throw new MojoExecutionException(message, ex);
         }
 
-        // set jnlp info
+        // set jnlp info -------------------------------------------------------
         if ((starterConfiguration.getTitle() != null) && !starterConfiguration.getTitle().isEmpty()) {
             info.setTitle(starterConfiguration.getTitle());
         } else {
@@ -583,7 +585,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final Resources resources = objectFactory.createResources();
         final List<Object> resourceList = resources.getJavaOrJ2SeOrJarOrNativelibOrExtensionOrPropertyOrPackage();
 
-        // set java properties
+        // set java properties -------------------------------------------------
         final Java java = starterConfiguration.getJava();
         final J2Se j2se = objectFactory.createJ2Se();
         j2se.setVersion(java.getVersion());
@@ -594,7 +596,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         }
         resourceList.add(j2se);
 
-        // add properties
+        // add properties ------------------------------------------------------
         if (starterConfiguration.getProperties() != null) {
             for (final Entry entry : starterConfiguration.getProperties().entrySet()) {
                 final Property property = objectFactory.createProperty();
@@ -605,22 +607,14 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
         }
 
-        // add all local jars
+        // add all local jars --------------------------------------------------
         final LocalConfiguration localConfiguration = starterConfiguration.getLocalConfiguration();
         if (localConfiguration.getJarNames() == null) {
             getLog().warn("no local jar names provided, not adding local jars"); // NOI18N
         } else {
-            final String localBase;
-
-            if (this.classpathFromMavenRepo) {
-                localBase = generateHRef(LIB_DIR + '/' + getLocalDirectory(localConfiguration)) + '/'; // NOI18N
-            } else {
-                // FIXME: set URL realtive to actual codebase! Here we assume that codebase is cidsDistDir!
-                localBase = LIB_DIR + '/' + getLocalDirectory(localConfiguration) + '/';
-            }
 
             if (getLog().isDebugEnabled()) {
-                getLog().debug("starter jnlp: using local base: " + localBase); // NOI18N
+                getLog().debug("starter jnlp: using local base: " + LIB_DIR + '/' + getLocalDirectory(localConfiguration)); // NOI18N
             }
 
             final List<String> localFileNames;
@@ -653,13 +647,16 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 }
 
                 final Jar jar = objectFactory.createJar();
-                jar.setHref(localBase + localJarFile.getName());
+                jar.setHref(
+                        generateHRef(getLocalDirectory(localConfiguration) 
+                        + File.separator + localJarFile.getName())
+                );
 
                 resourceList.add(jar);
             }
         }
 
-        // add securityJar
+        // add securityJar -----------------------------------------------------
 
         if (artifactEx.getDependencyEx().isGenerateSecurityJar()) {
             final String securityJarName = artifactEx.getArtifact().getArtifactId() + "-"
@@ -667,16 +664,11 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                         + "-" + CLASSFIER_SECURITY + "." + FILE_EXT_JAR;
 
             final Jar securityJar = objectFactory.createJar();
-            if (this.classpathFromMavenRepo) {
-                securityJar.setHref(generateSelfHRef(
-                        codebase,
+            securityJar.setHref(generateHRef(
                         securityJarName,
-                        null,
+                        starterConfiguration.getStarterAlias(),
                         this.getAccountExtension(artifactEx)));
-            } else {
-                securityJar.setHref(generateHRef(null, securityJarName, this.getAccountExtension(artifactEx)));
-            }
-
+            
             securityJar.setMain("true");
             resourceList.add(securityJar);
 
@@ -731,20 +723,17 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                     + artifactEx.getArtifact().getBaseVersion()
                     + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JNLP;          // NOI18N
 
-        // SET HREF OF STARTER JNLP!
-        if (this.classpathFromMavenRepo) {
-            jnlp.setHref(generateSelfHRef(
-                    codebase,
-                    jnlpName,
-                    starterConfiguration.getStarterAlias(),
-                    this.getAccountExtension(artifactEx)));
-        } else {
-            jnlp.setHref(generateHRef(null, jnlpName, this.getAccountExtension(artifactEx)));
-        }
-
+        
         // SET CODEBASE!
         final String trimmedCodebase = trimSlash(codebase.toString());
         jnlp.setCodebase(trimmedCodebase);
+
+        // SET HREF OF STARTER JNLP!
+        jnlp.setHref(generateHRef(
+                    jnlpName,
+                    starterConfiguration.getStarterAlias(),
+                    this.getAccountExtension(artifactEx)));
+
 
         final File starterJnlpFile = writeJnlp(
                 jnlp,
@@ -756,7 +745,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         starterJnlp.setJnlpFile(starterJnlpFile);
 
         if (artifactEx.getDependencyEx().isGenerateSecurityJar()) {
-            final File securityJar = this.generateSecurityJar(artifactEx, starterJnlp);
+            final File securityJar = this.generateSecurityJar(artifactEx, starterJnlp, starterConfiguration.getStarterAlias());
             getLog().info("Security JAR generated: " + securityJar.getAbsolutePath());
         }
 
@@ -987,6 +976,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                         + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JAR;                                // NOI18N
 
             // write the jarFile file
+            // TO BE DISCUSSED: SET ALIAS TO NULL?!
             final File jarFile = getOutputFile(jarname, null, this.getAccountExtension(parent));
             target = new JarOutputStream(new FileOutputStream(jarFile), manifest);
 
@@ -1030,7 +1020,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      *
      * @throws  MojoExecutionException  DOCUMENT ME!
      */
-    private File generateSecurityJar(final ArtifactEx artifactExtension, final StarterJnlp starterJnlp)
+    private File generateSecurityJar(final ArtifactEx artifactExtension, final StarterJnlp starterJnlp, final String alias)
             throws MojoExecutionException {
         final Artifact artifact = artifactExtension.getArtifact();
         JarOutputStream jarOutputStream = null;
@@ -1051,7 +1041,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                         + "-" + CLASSFIER_SECURITY + "." + FILE_EXT_JAR;                      // NOI18N
 
             // write the jarFile file
-            final File jarFile = getOutputFile(jarname, null, this.getAccountExtension(artifactExtension));
+            final File jarFile = getOutputFile(jarname, alias, this.getAccountExtension(artifactExtension));
             jarOutputStream = new JarOutputStream(new FileOutputStream(jarFile), manifest);
 
             final JarEntry jarEntry = new JarEntry("JNLP-INF/APPLICATION.JNLP");
@@ -1454,9 +1444,12 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 dependencyJar.setHref(generateJarHRef(this.getM2BaseURL(), dependency));
             } else {
                 if (dependency.getGroupId().startsWith(INT_GROUPD_ID)) {
-                    dependencyJar.setHref("../" + LIB_INT_DIR + '/' + dependency.getFile().getName());
+                    //dependencyJar.setHref("../" + LIB_INT_DIR + '/' + dependency.getFile().getName());
+                    dependencyJar.setHref(generateHRef(LIB_INT_DIR + File.separator + dependency.getFile().getName()));
+                    
                 } else {
-                    dependencyJar.setHref("../" + LIB_EXT_DIR + '/' + dependency.getFile().getName());
+                    //dependencyJar.setHref("../" + LIB_EXT_DIR + '/' + dependency.getFile().getName());
+                    dependencyJar.setHref(generateHRef(LIB_EXT_DIR + File.separator + dependency.getFile().getName()));
                 }
             }
 
@@ -1488,19 +1481,37 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final File jnlpFile = writeJnlp(jnlp, jnlpName, null, this.getAccountExtension(parent));
 
         final ClasspathJnlp classpathJnlp = new ClasspathJnlp(jnlp);
-
         classpathJnlp.setJnlpFile(jnlpFile);
+        
+        
+        // WARNING: If codebase is not set, all paths are relative to the location of the
+        // the JNLP File.
+        
+        // DON'T SET CODEBASE!
+        final String trimmedCodebase = trimSlash(codebase.toString());
+        classpathJnlp.setCodebase(trimmedCodebase);
+        
 
-        // SET HREF OF CLASSPATH JNLP!
-        if (this.classpathFromMavenRepo) {
-            classpathJnlp.setPrivateHref(generateSelfHRef(
-                    codebase,
+        // DON'T SET SET HREF OF STARTER JNLP!
+//        classpathJnlp.setHref(generateHRef(
+//                    jnlpName,
+//                    null,
+//                    this.getAccountExtension(parent)));
+        
+        
+        /**
+         * THIS IS MADNESS: 
+         * JLNP.class is a JAXB generated class. If we don't want to set the self reference HREF
+         * we have to extend the Jnlp.class by ClasspathJnlp class and introduce a privateHref
+         * Property that is not serialized back to JNLP XML because we *need* the self HREF
+         * for further processing!
+         * 
+         * TO BE DISCUSSED: SET ALIS TO NULL?!
+         */
+        classpathJnlp.setPrivateHref(generateHRef(
                     jnlpName,
                     null,
                     this.getAccountExtension(parent)));
-        } else {
-            classpathJnlp.setPrivateHref(generateHRef(null, jnlpName, this.getAccountExtension(parent)));
-        }
 
         return classpathJnlp;
     }
@@ -1662,8 +1673,17 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      *
      * @throws  IOException  if any of the folders cannot be created
      */
-    private File generateStructure() throws IOException {
+    private File generateLibDir() throws IOException {
         final File libDir = new File(outputDirectory, LIB_DIR);
+        if (!libDir.exists() && !libDir.isDirectory() && !libDir.mkdirs()) {
+            throw new IOException("could not create lib folder: " + libDir); // NOI18N
+        }
+
+        return libDir;
+    }
+    
+    private File generateLibDir(final String classfier) throws IOException {
+        final File libDir = new File(this.generateLibDir(), classfier);
         if (!libDir.exists() && !libDir.isDirectory() && !libDir.mkdirs()) {
             throw new IOException("could not create lib folder: " + libDir); // NOI18N
         }
@@ -1679,7 +1699,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @throws  IOException  DOCUMENT ME!
      */
     private File generateStarterDir() throws IOException {
-        final File starterDir = new File(generateStructure(), STARTER_DIR + accountExtension);
+        final File starterDir = this.generateLibDir(STARTER_DIR + accountExtension);
         if (!starterDir.exists() && !starterDir.isDirectory() && !starterDir.mkdir()) {
             throw new IOException("could not create starter folder: " + starterDir); // NOI18N
         }
@@ -1695,7 +1715,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @throws  IOException  DOCUMENT ME!
      */
     private File generateClasspathDir() throws IOException {
-        final File classpath = new File(generateStructure(), CLASSPATH_DIR + accountExtension);
+        final File classpath = this.generateLibDir(CLASSPATH_DIR + accountExtension);
         if (!classpath.exists() && !classpath.isDirectory() && !classpath.mkdir()) {
             throw new IOException("could not create classpath lib folder: " + classpath); // NOI18N
         }
@@ -1715,7 +1735,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     private File generateLocalDir(final LocalConfiguration localConfiguration) throws MojoExecutionException {
         final File localDir;
         try {
-            localDir = new File(generateStructure() + File.separator + getLocalDirectory(localConfiguration));
+            localDir = this.generateLibDir(getLocalDirectory(localConfiguration));
 
             if (getLog().isDebugEnabled()) {
                 getLog().debug("starter jar: using local dir: " + localDir); // NOI18N
@@ -1788,24 +1808,24 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         final String ext = filename.substring(filename.lastIndexOf('.') + 1);
 
         if (alias != null) {
-            getLog().warn("deprecated param alias '" + alias + "'provided for file:" + filename);
+            getLog().debug("param alias '" + alias + "' provided for file:" + filename);
         }
 
         if (name.endsWith(CLASSIFIER_CLASSPATH)) {
             return new File(generateClasspathDir(), filename);
-        } else if (name.endsWith(CLASSFIER_SECURITY)) {
+        } else if (name.endsWith(CLASSFIER_SECURITY)) { 
             if (alias == null) {
                 return new File(generateClientDir(accountExtension), filename);
             } else {
-                // WTF?
-                return new File(generateClientDir(accountExtension), alias + "." + FILE_EXT_JAR); // NOI18N
+                //return new File(generateClientDir(accountExtension), alias + "-" +CLASSFIER_SECURITY +"." + FILE_EXT_JAR); // NOI18N
+                
+                return new File(generateClientDir(accountExtension), alias  + FILE_EXT_JAR); // NOI18N
             }
         } else if (name.endsWith(CLASSIFIER_STARTER)) {
             if (FILE_EXT_JAR.equals(ext)) {
                 if (alias == null) {
                     return new File(generateStarterDir(), filename);
                 } else {
-                    // WTF?
                     return new File(generateStarterDir(), alias + "." + FILE_EXT_JAR);                 // NOI18N
                 }
             } else if (FILE_EXT_JNLP.equals(ext)) {
@@ -1814,14 +1834,33 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                 } else {
                     return new File(generateClientDir(accountExtension), alias + "." + FILE_EXT_JNLP); // NOI18N
                 }
-            } else {
+            }
+            else {
                 throw new IllegalArgumentException("unsupported file extension: " + ext);              // NOI18N
             }
-        } else {
+        } else if (name.startsWith(LIB_EXT_DIR) || name.startsWith(LIB_INT_DIR)) {
+                return new File(this.generateLibDir().toString() + File.separator + filename);
+            } else if (name.startsWith(LocalConfiguration.DEFAULT_LOCAL_DIR)) {
+                return new File(this.generateLibDir().toString() + File.separator + filename);
+            }
+         else {
             throw new IllegalArgumentException("unsupported classifier, filename: " + filename);       // NOI18N
         }
     }
+    
+    private String generateHRef(final String jnlpResource) throws MojoExecutionException {
+        return this.generateHRef(null, jnlpResource, null, null);
+    }
 
+    private String generateHRef(
+            final String jnlpResource,
+            final String alias,
+            final String accountExtension) throws MojoExecutionException {
+        
+        return this.generateHRef(null, jnlpResource, alias, accountExtension);
+    }
+    
+    
     /**
      * DOCUMENT ME!
      *
@@ -1833,28 +1872,45 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * @return  DOCUMENT ME!
      *
      * @throws  MojoExecutionException  IOException DOCUMENT ME!
+     * @depracated param codebase is deprecated!
      */
-    private String generateSelfHRef(final URL codebase,
+    @Deprecated
+    private String generateHRef(final URL codebase,
             final String jnlpResource,
             final String alias,
             final String accountExtension) throws MojoExecutionException {
+        
         try {
-            final StringBuilder sb = new StringBuilder();
-            if (codebase != null) {
-                sb.append(trimSlash(codebase.toString()));
-                if ('/' != sb.charAt(sb.length() - 1)) {
-                    sb.append('/');
+            final URL url = new URL(jnlpResource);
+             getLog().warn("absolute resource URLs are deprecated: " + url.toString()); // NOI18N
+            return url.toString();
+        } catch (final MalformedURLException e) {
+            try {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug("given url is considered tobe relative: " + jnlpResource, e); // NOI18N
                 }
+
+                final StringBuilder hrefBuilder = new StringBuilder();
+                // ABSOLUTE URLS ARE DEPRECATED --------------------------------
+                if (codebase != null) {
+                    hrefBuilder.append(trimSlash(codebase.toString()));
+                    if ('/' != hrefBuilder.charAt(hrefBuilder.length() - 1)) {
+                        hrefBuilder.append('/');
+                    }
+                    
+                    getLog().warn("given url is set absolute to codebase: " + hrefBuilder.toString()); // NOI18N
+                }
+                // ABSOLUTE URLS ARE DEPRECATED --------------------------------
+
+                final String outFile = getOutputFile(jnlpResource, alias, accountExtension).getAbsolutePath()
+                            .replace(outputDirectory.getAbsolutePath(), "") // NOI18N
+                    .replace(File.separator, "/");                          // NOI18N
+
+                hrefBuilder.append(trimSlash(outFile));
+                return hrefBuilder.toString();
+            } catch (IOException ex) {
+                throw new MojoExecutionException(ex.getMessage(), ex);
             }
-
-            final String outFile = getOutputFile(jnlpResource, alias, accountExtension).getAbsolutePath()
-                        .replace(outputDirectory.getAbsolutePath(), "") // NOI18N
-                .replace(File.separator, "/");                          // NOI18N
-
-            sb.append(trimSlash(outFile));
-            return sb.toString();
-        } catch (IOException ex) {
-            throw new MojoExecutionException(ex.getMessage(), ex);
         }
     }
 
@@ -1935,72 +1991,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         sb.append(artifact.getFile().getName());
 
         return sb.toString();
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
-     * @param   url  DOCUMENT ME!
-     *
-     * @return  DOCUMENT ME!
-     *
-     * @throws  MojoExecutionException  DOCUMENT ME!
-     */
-    @Deprecated
-    private String generateHRef(final String url) throws MojoExecutionException {
-        try {
-            return new URL(url).toString();
-        } catch (final MalformedURLException e) {
-            if (getLog().isDebugEnabled()) {
-                getLog().debug("given url is considered tobe relative: " + url, e); // NOI18N
-            }
-
-            final String trimmedCodebase = trimSlash(codebase.toString());
-            final String trimmedPath = trimSlash(url);
-
-            return trimmedCodebase + "/" + trimmedPath; // NOI18N
-        }
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
-     * @param   codebase          DOCUMENT ME!
-     * @param   jnlpResource      DOCUMENT ME!
-     * @param   accountExtension  DOCUMENT ME!
-     *
-     * @return  DOCUMENT ME!
-     *
-     * @throws  MojoExecutionException  DOCUMENT ME!
-     */
-    private String generateHRef(final String codebase, final String jnlpResource, final String accountExtension)
-            throws MojoExecutionException {
-        try {
-            return new URL(jnlpResource).toString();
-        } catch (final MalformedURLException e) {
-            try {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug("given url is considered tobe relative: " + jnlpResource, e); // NOI18N
-                }
-
-                final StringBuilder sb = new StringBuilder();
-                if (codebase != null) {
-                    sb.append(trimSlash(codebase.toString()));
-                    if ('/' != sb.charAt(sb.length() - 1)) {
-                        sb.append('/');
-                    }
-                }
-
-                final String outFile = getOutputFile(jnlpResource, null, accountExtension).getAbsolutePath()
-                            .replace(outputDirectory.getAbsolutePath(), "") // NOI18N
-                    .replace(File.separator, "/");                          // NOI18N
-
-                sb.append(trimSlash(outFile));
-                return sb.toString();
-            } catch (IOException ex) {
-                throw new MojoExecutionException(ex.getMessage(), ex);
-            }
-        }
     }
 
     /**
