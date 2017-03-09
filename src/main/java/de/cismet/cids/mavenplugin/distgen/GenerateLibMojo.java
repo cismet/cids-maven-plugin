@@ -103,7 +103,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     public static final String CLASSPATH_DIR = "classpath"; // NOI18N
 
     public static final String CLASSIFIER_CLASSPATH = "classpath"; // NOI18N
-    public static final String CLASSFIER_SECURITY = "security";
+    public static final String CLASSIFIER_SECURITY = "security";
     public static final String CLASSIFIER_STARTER = "starter";     // NOI18N
     public static final String FILE_EXT_JAR = "jar";               // NOI18N
     public static final String FILE_EXT_JNLP = "jnlp";             // NOI18N
@@ -661,7 +661,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         if (artifactEx.getDependencyEx().isGenerateSecurityJar()) {
             final String securityJarName = artifactEx.getArtifact().getArtifactId() + "-"
                         + artifactEx.getArtifact().getBaseVersion() // NOI18N
-                        + "-" + CLASSFIER_SECURITY + "." + FILE_EXT_JAR;
+                        + "_" + CLASSIFIER_SECURITY + "." + FILE_EXT_JAR;
 
             final Jar securityJar = objectFactory.createJar();
             securityJar.setHref(generateHRef(
@@ -724,7 +724,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                     + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JNLP;          // NOI18N
 
         
-        // SET CODEBASE!
+        // SET CODEBASE OF STARTER JNLP!
         final String trimmedCodebase = trimSlash(codebase.toString());
         jnlp.setCodebase(trimmedCodebase);
 
@@ -1029,16 +1029,15 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final Manifest manifest = new Manifest();
             manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");        // NOI18N
             manifest.getMainAttributes()
-                    .put(
-                        Attributes.Name.IMPLEMENTATION_TITLE,
+                    .put(Attributes.Name.IMPLEMENTATION_TITLE,
                         artifactExtension.getArtifact().getArtifactId()
-                        + "-"
-                        + CLASSFIER_SECURITY);
+                        + "_"
+                        + CLASSIFIER_SECURITY);
             manifest.getMainAttributes().put(Attributes.Name.IMPLEMENTATION_VENDOR, "cismet GmbH");
             manifest.getMainAttributes()
                     .put(Attributes.Name.IMPLEMENTATION_VERSION, artifactExtension.getArtifact().getVersion());
             final String jarname = artifact.getArtifactId() + "-" + artifact.getBaseVersion() // NOI18N
-                        + "-" + CLASSFIER_SECURITY + "." + FILE_EXT_JAR;                      // NOI18N
+                        + "_" + CLASSIFIER_SECURITY + "." + FILE_EXT_JAR;                      // NOI18N
 
             // write the jarFile file
             final File jarFile = getOutputFile(jarname, alias, this.getAccountExtension(artifactExtension));
@@ -1375,22 +1374,23 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
 
             if (!parentArtifact.getType().equalsIgnoreCase("pom")) {
-                final Jar self = objectFactory.createJar();
+                final Jar deploymentArtifactJar = objectFactory.createJar();
 
                 if (classpathFromMavenRepo) {
-                    self.setHref(generateJarHRef(this.getM2BaseURL(), parentArtifact));
+                    deploymentArtifactJar.setHref(generateJarHRef(this.getM2BaseURL(), parentArtifact));
                 } else {
-                    self.setHref(generateJarHRef(
-                            "../"
-                                    + LIB_DIR
-                                    + '/'
-                                    + LIB_INT_DIR
-                                    + '/',
-                            parentArtifact));
+                    if (parentArtifact.getGroupId().startsWith(INT_GROUPD_ID)) {
+                    //dependencyJar.setHref("../" + LIB_INT_DIR + '/' + dependency.getFile().getName());
+                    deploymentArtifactJar.setHref(generateHRef(LIB_INT_DIR + File.separator + parentArtifact.getFile().getName()));
+                    
+                    } else {
+                        //dependencyJar.setHref("../" + LIB_EXT_DIR + '/' + dependency.getFile().getName());
+                        deploymentArtifactJar.setHref(generateHRef(LIB_EXT_DIR + File.separator + parentArtifact.getFile().getName()));
+                    }
                 }
 
-                getLog().info("add JAR self reference: " + self.getHref());
-                jars.add(self);
+                getLog().info("add deploymentArtifact to classpath: " + deploymentArtifactJar.getHref());
+                jars.add(deploymentArtifactJar);
             } else {
                 getLog().info("ignoring artifact of type 'pom': " + parentArtifact.getArtifactId());
             }
@@ -1472,31 +1472,31 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         // add the necessary component-desc
         final ComponentDesc componentdesc = objectFactory.createComponentDesc();
         jnlp.getApplicationDescOrAppletDescOrComponentDescOrInstallerDesc().add(componentdesc);
-
+        
+        // WARNING: If codebase is not set, all paths are relative to the location of the
+        // the JNLP File.
+        
+        // SET CODEBASE of CLASSPATH.JNLP!
+        final String trimmedCodebase = trimSlash(codebase.toString());
+        jnlp.setCodebase(trimmedCodebase);
+        
         final String jnlpName = parentArtifact.getArtifactId() + "-" + parentArtifact.getBaseVersion() // NOI18N
-                    + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JNLP;                                // NOI18N
+                    + "-" + CLASSIFIER_CLASSPATH + "." + FILE_EXT_JNLP;         
+
+        // DON'T SET SET HREF OF STARTER JNLP!
+//                jnlp.setHref(generateHRef(
+//                            jnlpName,
+//                           null,
+//                            this.getAccountExtension(parent)));
 
         // DO NOT SET HREF OF CLASSPATH JNLP!
-        getLog().info("generating JNLP " + jnlpName);
+        getLog().info("generating CLASSPATH JNLP " + jnlpName);
         final File jnlpFile = writeJnlp(jnlp, jnlpName, null, this.getAccountExtension(parent));
 
         final ClasspathJnlp classpathJnlp = new ClasspathJnlp(jnlp);
         classpathJnlp.setJnlpFile(jnlpFile);
         
         
-        // WARNING: If codebase is not set, all paths are relative to the location of the
-        // the JNLP File.
-        
-        // DON'T SET CODEBASE!
-        final String trimmedCodebase = trimSlash(codebase.toString());
-        classpathJnlp.setCodebase(trimmedCodebase);
-        
-
-        // DON'T SET SET HREF OF STARTER JNLP!
-//        classpathJnlp.setHref(generateHRef(
-//                    jnlpName,
-//                    null,
-//                    this.getAccountExtension(parent)));
         
         
         /**
@@ -1512,7 +1512,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                     jnlpName,
                     null,
                     this.getAccountExtension(parent)));
-
+        
         return classpathJnlp;
     }
 
@@ -1537,14 +1537,13 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
             marshaller.setProperty(Marshaller.JAXB_ENCODING, "UTF-8");                      // NOI18N
             marshaller.marshal(jnlp, outFile);
-
-            if (getLog().isInfoEnabled()) {
-                getLog().info("generated jnlp: " + outFile); // NOI18N
-            }
+            
+            getLog().info("generated JNLP " + outFile.getAbsolutePath() +" (" 
+                    + jnlp.getCodebase() + '/' + jnlp.getHref() + ") for '" + jnlpName + "'");
 
             return outFile;
         } catch (final Exception e) {
-            final String message = "cannot create classpath jnlp: " + jnlpName; // NOI18N
+            final String message = "cannot create jnlp: " + jnlpName; // NOI18N
             getLog().error(message, e);                                         // NOI18N
 
             throw new MojoExecutionException(message, e);
@@ -1780,7 +1779,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         if (flatClientDirectory) {
             clientDir = new File(outputDirectory, CLIENT_DIR);
         } else {
-            clientDir = new File(outputDirectory, CLIENT_DIR + File.separator + accountExtension.toLowerCase());
+            clientDir = new File(outputDirectory, CLIENT_DIR + File.separator + accountExtension);
         }
 
         if (!clientDir.exists() && !clientDir.isDirectory() && !clientDir.mkdirs()) {
@@ -1813,26 +1812,24 @@ public class GenerateLibMojo extends AbstractCidsMojo {
 
         if (name.endsWith(CLASSIFIER_CLASSPATH)) {
             return new File(generateClasspathDir(), filename);
-        } else if (name.endsWith(CLASSFIER_SECURITY)) { 
+        } else if (name.endsWith(CLASSIFIER_SECURITY)) { 
             if (alias == null) {
                 return new File(generateClientDir(accountExtension), filename);
             } else {
-                //return new File(generateClientDir(accountExtension), alias + "-" +CLASSFIER_SECURITY +"." + FILE_EXT_JAR); // NOI18N
-                
-                return new File(generateClientDir(accountExtension), alias  + FILE_EXT_JAR); // NOI18N
+                return new File(generateClientDir(accountExtension), alias + "_" +CLASSIFIER_SECURITY +"." + FILE_EXT_JAR); // NOI18N
             }
         } else if (name.endsWith(CLASSIFIER_STARTER)) {
             if (FILE_EXT_JAR.equals(ext)) {
                 if (alias == null) {
                     return new File(generateStarterDir(), filename);
                 } else {
-                    return new File(generateStarterDir(), alias + "." + FILE_EXT_JAR);                 // NOI18N
+                    return new File(generateStarterDir(), alias + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JAR);                 // NOI18N
                 }
             } else if (FILE_EXT_JNLP.equals(ext)) {
                 if (alias == null) {
                     return new File(generateClientDir(accountExtension), filename);
                 } else {
-                    return new File(generateClientDir(accountExtension), alias + "." + FILE_EXT_JNLP); // NOI18N
+                    return new File(generateClientDir(accountExtension), alias + "-" + CLASSIFIER_STARTER + "." + FILE_EXT_JNLP); // NOI18N
                 }
             }
             else {
