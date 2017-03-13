@@ -69,8 +69,10 @@ import de.cismet.cids.jnlp.ApplicationDesc;
 import de.cismet.cids.jnlp.Argument;
 import de.cismet.cids.jnlp.ClasspathJnlp;
 import de.cismet.cids.jnlp.ComponentDesc;
+import de.cismet.cids.jnlp.Description;
 import de.cismet.cids.jnlp.Extension;
 import de.cismet.cids.jnlp.Homepage;
+import de.cismet.cids.jnlp.Icon;
 import de.cismet.cids.jnlp.Information;
 import de.cismet.cids.jnlp.J2Se;
 import de.cismet.cids.jnlp.Jar;
@@ -114,7 +116,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * Whether to skip the execution of this mojo.
      *
      * @parameter  property="cids.generate-lib.skip" default-value="false"
-     * @required   false
      */
     private transient Boolean skip;
 
@@ -122,7 +123,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * Whether to sign artifacts used to create the distribution.
      *
      * @parameter    property="cids.generate-lib.sign" default-value="true"
-     * @required     false
      * @deprecasted  JAR Signing is totally broken
      */
     @Deprecated private transient Boolean sign;
@@ -133,7 +133,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * true</code> jars will only be signed if they have not been signed with the set certificate before.
      *
      * @parameter    property="cids.generate-lib.checkSignature" default-value="true"
-     * @required     false
      * @deprecasted  JAR Signing is totally broken
      */
     @Deprecated private transient Boolean checkSignature;
@@ -142,7 +141,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * Controls whether specific messages are presented to the user or not.
      *
      * @parameter  property="cids.generate-lib.verbose" default-value="false"
-     * @required   false
      */
     private transient Boolean verbose;
 
@@ -152,8 +150,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * <br/>
      * E.g. outputDirectory = /home/cismet/cidsDistribution, codebase = http://www.cismet.de/cidsDistribution
      *
-     * @parameter  property="cids.generate-lib.outputDirectory" default-value="target/generate-lib-out"
-     * @required   true
+     * @parameter  property="cids.generate-lib.outputDirectory"
      */
     private transient File outputDirectory;
 
@@ -176,8 +173,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * hosted distribution and will be used in <code>jnlp</code> file generation. If the parameter is not provided,
      * <code>classpath-jnlp</code> files won't be generated.
      *
-     * @parameter  property="cids.generate-lib.codebase" default-value="http://localhost:3030"
-     * @required   false
+     * @parameter  property="cids.generate-lib.codebase"
      */
     private transient URL codebase;
 
@@ -190,7 +186,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * be done in <code>legacy</code> mode the value of this parameter will be ignored
      *
      * @parameter  property="cids.generate-lib.m2codebase" default-value="lib/m2"
-     * @required   false
      */
     private transient String m2codebase;
 
@@ -202,7 +197,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * relative</strong> to cidsDistributionDirectory.</p>
      *
      * @parameter  property="cids.generate-lib.classpathFromMavenRepo" default-value="true"
-     * @required   false
      */
     private transient boolean classpathFromMavenRepo;
 
@@ -210,7 +204,6 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * DOCUMENT ME!
      *
      * @parameter  property="cids.generate-lib.flatClientDirectory" default-value="false"
-     * @required   false
      */
     private transient boolean flatClientDirectory;
 
@@ -218,7 +211,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
      * DOCUMENT ME!
      *
      * @parameter  property="cids.generate-lib.accountExtension"
-     * @required   true
+     * @required
      */
     private transient String accountExtension;
 
@@ -572,6 +565,11 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         } else {
             info.setTitle(artifactProject.getName() + " Starter"); // NOI18N
         }
+        if ((starterConfiguration.getDescription() != null) && !starterConfiguration.getDescription().isEmpty()) {
+            final Description description = new Description();
+            description.setvalue(starterConfiguration.getDescription());
+            info.getDescription().add(description);
+        }
         if (vendor != null) {
             info.setVendor(vendor);
         }
@@ -579,6 +577,16 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             final Homepage hp = objectFactory.createHomepage();
             hp.setHref(homepage);
             info.setHomepage(hp);
+        }
+        if ((starterConfiguration.getIcon() != null) && !starterConfiguration.getIcon().isEmpty()) {
+            final Icon icon = new Icon();
+            icon.setHref(starterConfiguration.getIcon());
+            info.getIcon().add(icon);
+        }
+        if ((starterConfiguration.getSplashScreen() != null) && !starterConfiguration.getSplashScreen().isEmpty()) {
+            final Icon icon = new Icon();
+            icon.setHref(starterConfiguration.getSplashScreen());
+            info.getIcon().add(icon);
         }
         jnlp.getInformation().add(info);
 
@@ -1399,7 +1407,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         assert artifactProject != null : "artifact project must not be null"; // NOI18N
 
         // set jnlp info
-        info.setTitle(artifactProject.getName());
+        info.setTitle(artifactProject.getName()+"-"+CLASSIFIER_CLASSPATH);
         if (vendor != null) {
             info.setVendor(vendor);
         }
@@ -1408,6 +1416,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             hp.setHref(homepage);
             info.setHomepage(hp);
         }
+        
         jnlp.getInformation().add(info);
 
         final ArtifactFilter filter;
