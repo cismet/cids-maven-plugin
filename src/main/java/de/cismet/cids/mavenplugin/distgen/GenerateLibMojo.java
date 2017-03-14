@@ -397,48 +397,52 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             throw new MojoFailureException("starter configuration needs main class definition"); // NOI18N
         }
 
+        final StringBuilder classpath = new StringBuilder();
+        
+        // Local JARS ----------------------------------------------------------
         final LocalConfiguration localConfiguration = starterConfiguration.getLocalConfiguration();
         final File localDir = this.generateLocalDir(localConfiguration);
+        
+        if (localConfiguration.getJarNames() != null && localConfiguration.getJarNames().length != 0)
+        {
+            final List<String> localFileNames = new ArrayList<String>(Arrays.asList(localConfiguration.getJarNames()));
 
-        final List<String> localFileNames;
-        if (localConfiguration.getJarNames() == null) {
-            localFileNames = null;
+            // WARNING: BAD PARACTICE: This operation *modifies* localFileNames
+            // and removes all filenams that *are* present in localDir!
+            final File[] availableLocalJars = this.getLocalJars(localDir, localFileNames);
+
+            if (!localFileNames.isEmpty()) {
+                final StringBuilder sb = new StringBuilder();
+                for (final String s : localFileNames) {
+                    sb.append(s).append(", ");
+                }
+                sb.delete(sb.length() - 2, sb.length());
+
+                getLog().warn(
+                    "The following jars are not included in the starter classpath, because they are not present: " // NOI18N
+                            + sb.toString());
+            }
+
+            for (final File localJarFile : availableLocalJars) {
+                if (!isSigned(localJarFile)) {
+                    signJar(localJarFile);
+                }
+
+                if (classpathFromMavenRepo) {
+                    classpath.append(getManifestCompatiblePath(localJarFile.getAbsolutePath())).append(' ');
+                } else {
+                    classpath.append("../")
+                            .append(this.getLocalDirectory(localConfiguration))
+                            .append('/')
+                            .append(localJarFile.getName())
+                            .append(' ');
+                }
+            }
         } else {
-            localFileNames = new ArrayList<String>(Arrays.asList(localConfiguration.getJarNames()));
+             getLog().warn("No local configuration defined, ignoring all local jars in " + localDir.getAbsolutePath());
         }
 
-        final File[] localJars = this.getLocalJars(localDir, localFileNames);
-
-        if ((localFileNames != null) && !localFileNames.isEmpty()) {
-            final StringBuilder sb = new StringBuilder();
-            for (final String s : localFileNames) {
-                sb.append(s).append(", ");
-            }
-            sb.delete(sb.length() - 2, sb.length());
-
-            getLog().warn(
-                "The following jars are not included in the starter classpath, because they are not present: " // NOI18N
-                        + sb.toString());
-        }
-
-        final StringBuilder classpath = new StringBuilder();
-
-        for (final File localJarFile : localJars) {
-            if (!isSigned(localJarFile)) {
-                signJar(localJarFile);
-            }
-
-            if (classpathFromMavenRepo) {
-                classpath.append(getManifestCompatiblePath(localJarFile.getAbsolutePath())).append(' ');
-            } else {
-                classpath.append("../")
-                        .append(this.getLocalDirectory(localConfiguration))
-                        .append('/')
-                        .append(localJarFile.getName())
-                        .append(' ');
-            }
-        }
-
+        // Classpath JAR -------------------------------------------------------
         if (artifactEx.getExtendedClassPathJar() != null) {
             if (classpathFromMavenRepo) {
                 classpath.append(getManifestCompatiblePath(artifactEx.getExtendedClassPathJar().getAbsolutePath()));
@@ -463,7 +467,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
             }
         }
 
-        // Generate Manifest and jarFile File
+        // Generate Manifest and jarFile File ----------------------------------
         final Manifest manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0"); // NOI18N
         manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpath.toString());
@@ -908,12 +912,15 @@ public class GenerateLibMojo extends AbstractCidsMojo {
         // we don't append the parent artifact's file path if the artifact is virtual or just a pom artifact!
         if (virtual || parentArtifact.getType().equalsIgnoreCase("pom")) {
             classpath = new StringBuilder();
+            getLog().warn("Don't append the parent artifact's ("+parentArtifact.getArtifactId()+") file path since the artifact is virtual or just a pom artifact!");
         } else {
             if (classpathFromMavenRepo) {
                 classpath = new StringBuilder(getManifestCompatiblePath(parentArtifact.getFile().getAbsolutePath()));
             } else {
                 classpath = new StringBuilder("../");
-                classpath.append("../").append(LIB_INT_DIR).append('/').append(parentArtifact.getFile().getName());
+                classpath.append(LIB_INT_DIR).append('/')
+                        .append(parentArtifact.getFile().getName());
+                getLog().info("parent artifact ("+parentArtifact.getArtifactId()+") classpath: " + classpath.toString());
             }
             classpath.append(' ');
         }
@@ -2016,7 +2023,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
     }
 
     /**
-     * DOCUMENT ME!
+     * WARNING: This operation deletes  non-present files from localFileNames
      *
      * @param   localDir        DOCUMENT ME!
      * @param   localFileNames  DOCUMENT ME!
