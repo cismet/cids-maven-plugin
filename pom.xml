@@ -5,38 +5,47 @@
     <parent>
         <groupId>de.cismet</groupId>
         <artifactId>cismet-parent</artifactId>
-        <version>3.3</version>
+        <version>5.0</version>
     </parent>
 
     <groupId>de.cismet.cids</groupId>
     <artifactId>cids-maven-plugin</artifactId>
-    <version>4.0</version>
+    <version>5.0</version>
     <packaging>maven-plugin</packaging>
 
     <name>cids maven2 plugin</name>
     <description>Simple maven2 plugin that helps with several cids related maven actions</description>
-    <licenses>
-        <license>
-            <name>GNU Lesser General Public License</name>
-            <distribution>repo</distribution>
-            <url>http://www.gnu.org/licenses/lgpl-3.0.html</url>
-        </license>
-    </licenses>
-
-    <prerequisites>
-        <maven>3.3.1</maven>
-    </prerequisites>
-
+   
     <scm>
         <connection>https://github.com/cismet/cids-maven-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:cismet/cids-maven-plugin.git</developerConnection>
         <url>https://github.com/cismet/cids-maven-plugin</url>
-      <tag>v4.0</tag>
-  </scm>
+        <tag>v5.0</tag>
+    </scm>
+    
+    <ciManagement>
+        <system>jenkins</system>
+        <url>https://ci.cismet.de/job/cids-maven-plugin/</url>
+    </ciManagement>
+  
     <issueManagement>
         <system>GitHub</system>
         <url>https://github.com/cismet/cids-maven-plugin/issues/</url>
     </issueManagement>
+    
+    <dependencyManagement>  
+        <!-- IMPORT of cismet-ext-bom -->
+        <dependencies>
+            <dependency>
+                <groupId>de.cismet</groupId>
+                <artifactId>cismet-ext-bom</artifactId>
+                <version>5.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    
     <distributionManagement>
         <repository>
             <id>cismet-repo</id>
@@ -49,11 +58,7 @@
             <url>https://repo.cismet.de/plugins-snapshots-local</url>
         </snapshotRepository>
     </distributionManagement>
-
-    <properties>
-        <maven.version>3.3.1</maven.version>
-    </properties>
-
+    
     <dependencies>
         <dependency>
             <groupId>org.apache.maven</groupId>
@@ -81,35 +86,25 @@
             <version>${maven.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-model-builder</artifactId>
-            <version>${maven.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.eclipse.aether</groupId>
             <artifactId>aether-api</artifactId>
-            <version>1.0.2.v20150114</version>
+            <version>1.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.aether</groupId>
             <artifactId>aether-util</artifactId>
-            <version>1.0.2.v20150114</version>
+            <version>1.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-archiver</artifactId>
-            <version>3.0.1</version>
+            <version>3.4</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-utils</artifactId>
-            <version>3.0.22</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.shared</groupId>
-            <artifactId>maven-dependency-tree</artifactId>
-            <version>2.2</version>
-        </dependency>    
+            <version>3.0.24</version>
+        </dependency>  
         <dependency>
             <groupId>org.twdata.maven</groupId>
             <artifactId>mojo-executor</artifactId>
@@ -124,7 +119,6 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -142,7 +136,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.19.1</version>
                 <configuration>
                     <excludes>
                         <exclude>**</exclude>
@@ -173,7 +166,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>1.12</version>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <phase>generate-sources</phase>
@@ -187,15 +180,6 @@
                         <source>target/generated-sources/xjc</source>
                     </sources>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.10.4</version>
-                <!-- FIXME: -Xdoclint:none disabled for building against Java 1.7 on boxy -->
-                <!--<configuration>
-                    <additionalparam>-Xdoclint:none</additionalparam>
-                </configuration>-->
             </plugin>
         </plugins>
     </build>

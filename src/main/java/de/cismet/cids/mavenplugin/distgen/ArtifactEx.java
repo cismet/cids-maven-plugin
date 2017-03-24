@@ -14,10 +14,11 @@ import org.eclipse.aether.graph.DependencyNode;
 
 import java.io.File;
 
+import de.cismet.cids.jnlp.ClasspathJnlp;
 import de.cismet.cids.jnlp.Jnlp;
 
 /**
- * DOCUMENT ME!
+ * Ex = EXtension!
  *
  * @author   martin.scholl@cismet.de
  * @version  $Revision$, $Date$
@@ -30,10 +31,22 @@ public final class ArtifactEx {
     private final transient DependencyEx dependencyEx;
 
     private transient File classPathJar;
-    private transient File extendedClassPathJar;
+
+    /**
+     * The name is totally missleading! This is the dependency list of <strong>additional</strong> dependencies (thier
+     * use is striongly discouraged)!
+     */
+    @Deprecated private transient File extendedClassPathJar;
+
     private transient File starterJar;
-    private transient Jnlp classPathJnlp;
-    private transient Jnlp extendedClassPathJnlp;
+    private transient ClasspathJnlp classPathJnlp;
+
+    /**
+     * The name is totally missleading (Ex vs Extension vs Extended)! This is the dependency list of <strong>
+     * additional</strong> dependencies (thier use is striongly discouraged)!
+     */
+    @Deprecated private transient ClasspathJnlp extendedClassPathJnlp;
+
     private transient Jnlp starterJnlp;
     private transient DependencyNode dependencyTreeRoot;
     private transient MavenProject virtualProject;
@@ -85,6 +98,7 @@ public final class ArtifactEx {
      *
      * @return  DOCUMENT ME!
      */
+    @Deprecated
     public MavenProject getVirtualProject() {
         return virtualProject;
     }
@@ -94,6 +108,7 @@ public final class ArtifactEx {
      *
      * @param  virtualProject  DOCUMENT ME!
      */
+    @Deprecated
     public void setVirtualProject(final MavenProject virtualProject) {
         this.virtualProject = virtualProject;
     }
@@ -139,7 +154,7 @@ public final class ArtifactEx {
      *
      * @return  DOCUMENT ME!
      */
-    public Jnlp getClassPathJnlp() {
+    public ClasspathJnlp getClassPathJnlp() {
         return classPathJnlp;
     }
 
@@ -148,7 +163,7 @@ public final class ArtifactEx {
      *
      * @param  classPathJnlp  DOCUMENT ME!
      */
-    public void setClassPathJnlp(final Jnlp classPathJnlp) {
+    public void setClassPathJnlp(final ClasspathJnlp classPathJnlp) {
         this.classPathJnlp = classPathJnlp;
     }
 
@@ -175,6 +190,7 @@ public final class ArtifactEx {
      *
      * @return  DOCUMENT ME!
      */
+    @Deprecated
     public File getExtendedClassPathJar() {
         return extendedClassPathJar;
     }
@@ -182,8 +198,11 @@ public final class ArtifactEx {
     /**
      * DOCUMENT ME!
      *
-     * @param  extendedClassPathJar  DOCUMENT ME!
+     * @param       extendedClassPathJar  DOCUMENT ME!
+     *
+     * @deprecated  DOCUMENT ME!
      */
+    @Deprecated
     public void setExtendedClassPathJar(final File extendedClassPathJar) {
         this.extendedClassPathJar = extendedClassPathJar;
     }
@@ -191,9 +210,12 @@ public final class ArtifactEx {
     /**
      * DOCUMENT ME!
      *
-     * @return  DOCUMENT ME!
+     * @return      DOCUMENT ME!
+     *
+     * @deprecated  DOCUMENT ME!
      */
-    public Jnlp getExtendedClassPathJnlp() {
+    @Deprecated
+    public ClasspathJnlp getExtendedClassPathJnlp() {
         return extendedClassPathJnlp;
     }
 
@@ -202,7 +224,8 @@ public final class ArtifactEx {
      *
      * @param  extendedClassPathJnlp  DOCUMENT ME!
      */
-    public void setExtendedClassPathJnlp(final Jnlp extendedClassPathJnlp) {
+    @Deprecated
+    public void setExtendedClassPathJnlp(final ClasspathJnlp extendedClassPathJnlp) {
         this.extendedClassPathJnlp = extendedClassPathJnlp;
     }
 
