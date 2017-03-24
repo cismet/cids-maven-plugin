@@ -25,9 +25,13 @@ public final class DependencyEx extends Dependency {
 
     private transient boolean generateJnlp = true;
 
-    private transient Dependency[] additionalDependencies;
+    @Deprecated private transient Dependency[] additionalDependencies;
 
     private transient StarterConfiguration starterConfiguration;
+
+    private String accountExtension;
+
+    private boolean generateSecurityJar = true;
 
     //~ Constructors -----------------------------------------------------------
 
@@ -64,7 +68,9 @@ public final class DependencyEx extends Dependency {
         sb.append(super.toString());
         sb.append(", generateJar=").append(generateJar);
         sb.append(", generateJnlp=").append(generateJnlp);
+        sb.append(", generateSecurityJar=").append(generateSecurityJar);
         sb.append(", additionalDeps=").append(Arrays.deepToString(additionalDependencies));
+        sb.append(", accountExtension=").append(accountExtension);
         sb.append(", starter=").append(starterConfiguration);
         sb.append(']');
 
@@ -90,19 +96,27 @@ public final class DependencyEx extends Dependency {
     }
 
     /**
-     * DOCUMENT ME!
+     * <strong>WARNING</strong><br>
+     * Usage of additional dependencies is strongly discouraged as it totally breaks the maven dependency mechanism.
      *
-     * @return  DOCUMENT ME!
+     * @return      DOCUMENT ME!
+     *
+     * @deprecated  See https://cismet.slack.com/files/pascal.dihe/F45QC6805/Autodistribution_mit_cids-maven-plugin
      */
+    @Deprecated
     public Dependency[] getAdditionalDependencies() {
         return additionalDependencies;
     }
 
     /**
-     * DOCUMENT ME!
+     * <strong>WARNING</strong><br>
+     * Usage of additional dependencies is strongly discouraged as it totally breaks the maven dependency mechanism.
      *
-     * @param  additionalDependencies  DOCUMENT ME!
+     * @param       additionalDependencies  DOCUMENT ME!
+     *
+     * @deprecated  See https://cismet.slack.com/files/pascal.dihe/F45QC6805/Autodistribution_mit_cids-maven-plugin
      */
+    @Deprecated
     public void setAdditionalDependencies(final Dependency[] additionalDependencies) {
         this.additionalDependencies = additionalDependencies;
     }
@@ -141,5 +155,41 @@ public final class DependencyEx extends Dependency {
      */
     public void setStarterConfiguration(final StarterConfiguration starterConfiguration) {
         this.starterConfiguration = starterConfiguration;
+    }
+
+    /**
+     * Get the value of accountExtension.
+     *
+     * @return  the value of accountExtension
+     */
+    public String getAccountExtension() {
+        return accountExtension;
+    }
+
+    /**
+     * Set the value of accountExtension.
+     *
+     * @param  accountExtension  new value of accountExtension
+     */
+    public void setAccountExtension(final String accountExtension) {
+        this.accountExtension = accountExtension;
+    }
+
+    /**
+     * Get the value of generateSecurityJar.
+     *
+     * @return  the value of generateSecurityJar
+     */
+    public boolean isGenerateSecurityJar() {
+        return generateSecurityJar;
+    }
+
+    /**
+     * Set the value of generateSecurityJar.
+     *
+     * @param  generateSecurityJar  new value of generateSecurityJar
+     */
+    public void setGenerateSecurityJar(final boolean generateSecurityJar) {
+        this.generateSecurityJar = generateSecurityJar;
     }
 }
