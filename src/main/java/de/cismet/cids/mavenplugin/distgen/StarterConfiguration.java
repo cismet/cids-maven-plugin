@@ -33,71 +33,68 @@ public final class StarterConfiguration {
     private transient Properties properties;
 
     private transient String starterAlias;
-    
-        private transient String icon;
+
+    private transient String icon;
+
+    private transient String splashScreen;
+
+    private String description;
+
+    //~ Methods ----------------------------------------------------------------
 
     /**
-     * Get the value of icon
+     * Get the value of icon.
      *
-     * @return the value of icon
+     * @return  the value of icon
      */
     public String getIcon() {
         return icon;
     }
 
     /**
-     * Set the value of icon
+     * Set the value of icon.
      *
-     * @param icon new value of icon
+     * @param  icon  new value of icon
      */
-    public void setIcon(String icon) {
+    public void setIcon(final String icon) {
         this.icon = icon;
     }
-    
-        private transient String splashScreen;
 
     /**
-     * Get the value of splashScreen
+     * Get the value of splashScreen.
      *
-     * @return the value of splashScreen
+     * @return  the value of splashScreen
      */
     public String getSplashScreen() {
         return splashScreen;
     }
 
     /**
-     * Set the value of splashScreen
+     * Set the value of splashScreen.
      *
-     * @param splashScreen new value of splashScreen
+     * @param  splashScreen  new value of splashScreen
      */
-    public void setSplashScreen(String splashScreen) {
+    public void setSplashScreen(final String splashScreen) {
         this.splashScreen = splashScreen;
     }
-    
-        private String description;
 
     /**
-     * Get the value of description
+     * Get the value of description.
      *
-     * @return the value of description
+     * @return  the value of description
      */
     public String getDescription() {
         return description;
     }
 
     /**
-     * Set the value of description
+     * Set the value of description.
      *
-     * @param description new value of description
+     * @param  description  new value of description
      */
-    public void setDescription(String description) {
+    public void setDescription(final String description) {
         this.description = description;
     }
-
-
-
-
-    //~ Methods ----------------------------------------------------------------
 
     @Override
     public String toString() {
