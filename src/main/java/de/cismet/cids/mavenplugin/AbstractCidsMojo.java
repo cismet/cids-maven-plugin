@@ -63,9 +63,9 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
 
     public static final String PROP_CIDS_CLASSPATH = "de.cismet.cids.classpath"; // NOI18N
 
-    public static final String LIB_DIR = "lib";     // NOI18N
-    public static final String LIB_EXT_DIR = "ext"; // NOI18N
-    public static final String LIB_INT_DIR = "int"; // NOI18N
+    public static final String LIB_DIR = "lib";             // NOI18N
+    public static final String LIB_EXT_DIR = "ext";         // NOI18N
+    public static final String LIB_INT_DIR = "int";         // NOI18N
     public static final String INT_GROUPD_ID = "de.cismet"; // NOI18N
 
     //~ Instance fields --------------------------------------------------------
@@ -170,7 +170,7 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *                                                                       artifacts cannot be created from the
      *                                                                       created maven project
      * @throws  InstallationException                                        if an artifact of the given artifact cannot
-                                                                       be resolvedArtifact
+     *                                                                       be resolvedArtifact
      * @throws  IOException                                                  ArtifactNotFoundException if an artifact of
      *                                                                       the given artifact cannot be found
      * @throws  ProjectBuildingException                                     if no maven project can be build from the
@@ -194,8 +194,9 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      *
      * @return  all the dependencies artifacts of the given artifact
      *
-     * @throws  org.eclipse.aether.resolution.DependencyResolutionException  if the dependencies cannot be resolvedArtifact for
-                                                                       the given project for any reason
+     * @throws  org.eclipse.aether.resolution.DependencyResolutionException  if the dependencies cannot be
+     *                                                                       resolvedArtifact for the given project for
+     *                                                                       any reason
      * @throws  InstallationException                                        if a temporary artifact cannot be installed
      *                                                                       when dealing with virtual artifacts
      * @throws  IOException                                                  if a temporary pom cannot be written when
@@ -231,7 +232,8 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
      * @return  all the dependencies artifacts of the given project
      *
      * @throws  DependencyResolutionException  org.eclipse.aether.resolution.DependencyResolutionException if the
-                                         dependencies cannot be resolvedArtifact for the given project for any reason
+     *                                         dependencies cannot be resolvedArtifact for the given project for any
+     *                                         reason
      * @throws  InstallationException          if a temporary artifact cannot be installed when dealing with virtual
      *                                         artifacts
      * @throws  IOException                    if a temporary pom cannot be written when dealing with virtual artifacts
@@ -239,11 +241,8 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
     protected Set<Artifact> resolveArtifacts(final MavenProject artifactProject,
             final String scope,
             final ArtifactFilter filter) throws DependencyResolutionException, InstallationException, IOException {
-        
         /*final Set<Artifact> artifacts = this.project.getArtifacts();
-        for (final Artifact artifact : artifacts) {
-            getLog().info(artifact.toString());
-        }*/
+         * for (final Artifact artifact : artifacts) { getLog().info(artifact.toString());}*/
 
         @Deprecated
         org.eclipse.aether.artifact.Artifact deploymentArtifact = new DefaultArtifact(
@@ -328,16 +327,16 @@ public abstract class AbstractCidsMojo extends AbstractMojo {
                     if (getLog().isDebugEnabled()) {
                         getLog().debug("resolved dependency: " + resolvedArtifact.getArtifactId());
                     }
-                    
+
                     // WARNING: PLACE CIDS ARTIFACTS FIRST!!!!!!!!!!
                     if (resolvedArtifact.getGroupId().startsWith(INT_GROUPD_ID)) {
                         resolvedIntArtifacts.add(resolvedArtifact);
                     } else {
                         resolvedExtArtifacts.add(resolvedArtifact);
-                    } 
+                    }
                 }
             }
-            
+
             resolvedArtifacts.addAll(resolvedIntArtifacts);
             resolvedArtifacts.addAll(resolvedExtArtifacts);
 
