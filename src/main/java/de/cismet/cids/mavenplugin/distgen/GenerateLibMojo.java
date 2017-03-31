@@ -2085,7 +2085,7 @@ public class GenerateLibMojo extends AbstractCidsMojo {
                         }
                     }
                 });
-
+        Arrays.sort(localJars);
         return localJars;
     }
 }
