@@ -5,12 +5,12 @@
     <parent>
         <groupId>de.cismet</groupId>
         <artifactId>cismet-parent</artifactId>
-        <version>5.0</version>
+        <version>6.0</version>
     </parent>
 
     <groupId>de.cismet.cids</groupId>
     <artifactId>cids-maven-plugin</artifactId>
-    <version>5.0.1</version>
+    <version>6.0</version>
     <packaging>maven-plugin</packaging>
 
     <name>cids maven2 plugin</name>
@@ -20,7 +20,7 @@
         <connection>https://github.com/cismet/cids-maven-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:cismet/cids-maven-plugin.git</developerConnection>
         <url>https://github.com/cismet/cids-maven-plugin</url>
-        <tag>v5.0.1</tag>
+        <tag>v6.0</tag>
     </scm>
     
     <ciManagement>
@@ -39,7 +39,7 @@
             <dependency>
                 <groupId>de.cismet</groupId>
                 <artifactId>cismet-ext-bom</artifactId>
-                <version>5.0</version>
+                <version>6.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -86,16 +86,6 @@
             <version>${maven.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.aether</groupId>
-            <artifactId>aether-api</artifactId>
-            <version>1.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.aether</groupId>
-            <artifactId>aether-util</artifactId>
-            <version>1.1.0</version>
-        </dependency>
-        <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-archiver</artifactId>
             <version>3.4</version>
@@ -120,6 +110,16 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-api</artifactId>
+            <version>1.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-util</artifactId>
+            <version>1.0.3</version>
         </dependency>
     </dependencies>
 
