@@ -14,8 +14,6 @@ import org.eclipse.aether.graph.DependencyNode;
 
 import java.io.File;
 
-import de.cismet.cids.jnlp.ClasspathJnlp;
-import de.cismet.cids.jnlp.Jnlp;
 
 /**
  * Ex = EXtension!
@@ -39,15 +37,7 @@ public final class ArtifactEx {
     @Deprecated private transient File extendedClassPathJar;
 
     private transient File starterJar;
-    private transient ClasspathJnlp classPathJnlp;
 
-    /**
-     * The name is totally missleading (Ex vs Extension vs Extended)! This is the dependency list of <strong>
-     * additional</strong> dependencies (thier use is striongly discouraged)!
-     */
-    @Deprecated private transient ClasspathJnlp extendedClassPathJnlp;
-
-    private transient Jnlp starterJnlp;
     private transient DependencyNode dependencyTreeRoot;
     private transient MavenProject virtualProject;
 
@@ -154,24 +144,6 @@ public final class ArtifactEx {
      *
      * @return  DOCUMENT ME!
      */
-    public ClasspathJnlp getClassPathJnlp() {
-        return classPathJnlp;
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
-     * @param  classPathJnlp  DOCUMENT ME!
-     */
-    public void setClassPathJnlp(final ClasspathJnlp classPathJnlp) {
-        this.classPathJnlp = classPathJnlp;
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
-     * @return  DOCUMENT ME!
-     */
     public DependencyNode getDependencyTreeRoot() {
         return dependencyTreeRoot;
     }
@@ -210,28 +182,6 @@ public final class ArtifactEx {
     /**
      * DOCUMENT ME!
      *
-     * @return      DOCUMENT ME!
-     *
-     * @deprecated  DOCUMENT ME!
-     */
-    @Deprecated
-    public ClasspathJnlp getExtendedClassPathJnlp() {
-        return extendedClassPathJnlp;
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
-     * @param  extendedClassPathJnlp  DOCUMENT ME!
-     */
-    @Deprecated
-    public void setExtendedClassPathJnlp(final ClasspathJnlp extendedClassPathJnlp) {
-        this.extendedClassPathJnlp = extendedClassPathJnlp;
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
      * @return  DOCUMENT ME!
      */
     public File getStarterJar() {
@@ -247,24 +197,6 @@ public final class ArtifactEx {
         this.starterJar = starterJar;
     }
 
-    /**
-     * DOCUMENT ME!
-     *
-     * @return  DOCUMENT ME!
-     */
-    public Jnlp getStarterJnlp() {
-        return starterJnlp;
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
-     * @param  starterJnlp  DOCUMENT ME!
-     */
-    public void setStarterJnlp(final Jnlp starterJnlp) {
-        this.starterJnlp = starterJnlp;
-    }
-
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
@@ -275,8 +207,6 @@ public final class ArtifactEx {
         sb.append(dependencyEx);
         sb.append(", classPathJar=").append(classPathJar);
         sb.append(", extendedClassPathJar=").append(extendedClassPathJar);
-        sb.append(", classPathJnlp=").append(classPathJnlp);
-        sb.append(", extendedClassPathJnlp=").append(extendedClassPathJnlp);
         sb.append(", isVirtual=").append(isVirtual());
         sb.append(", virtualProject=").append(virtualProject);
         sb.append(']');

@@ -12,6 +12,10 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.plugins.annotations.Execute;
 
 import java.io.File;
 
@@ -21,10 +25,13 @@ import java.util.Set;
  * Goal which stores the classpath of the directly declared dependencies into a property.
  *
  * @version                       1.0
- * @goal                          create-direct-cp-property
- * @phase                         initialize
- * @requiresDependencyResolution  compile
  */
+@Mojo(
+    name = "create-direct-cp-property",
+    defaultPhase = LifecyclePhase.INITIALIZE,
+    requiresDependencyResolution = ResolutionScope.COMPILE
+)
+@Execute(phase = LifecyclePhase.INITIALIZE)
 public final class CreateDirectCpPropertyMojo extends AbstractMojo {
 
     //~ Static fields/initializers ---------------------------------------------
