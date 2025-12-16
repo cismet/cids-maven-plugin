@@ -22,15 +22,20 @@ import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 
 /**
  * Goal which creates properties related to a cids project.
  *
  * @version                       $Revision$, $Date$
- * @goal                          create-properties
- * @phase                         process-classes
- * @requiresDependencyResolution  runtime
  */
+@Mojo(
+    name = "create-properties",
+    defaultPhase = LifecyclePhase.PROCESS_CLASSES,
+    requiresDependencyResolution = ResolutionScope.RUNTIME
+)
 public class CreatePropertiesMojo extends AbstractCidsMojo {
 
     //~ Instance fields --------------------------------------------------------

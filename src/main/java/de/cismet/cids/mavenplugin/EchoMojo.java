@@ -11,14 +11,15 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugins.annotations.Mojo;
 
 /**
  * Simple plugin do display a message.
  *
  * @author   martin.scholl@cismet.de
  * @version  1.0
- * @goal     echo
  */
+@Mojo(name = "echo")
 public final class EchoMojo extends AbstractMojo {
 
     //~ Instance fields --------------------------------------------------------

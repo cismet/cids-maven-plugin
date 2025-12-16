@@ -26,16 +26,21 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 
 /**
  * This goal generates default i18n jars from a specified folder.
  *
  * @author                        martin.scholl@cismet.de
  * @version                       $Revision$, $Date$
- * @goal                          generate-i18n
- * @phase                         prepare-package
- * @requiresDependencyResolution  runtime
  */
+@Mojo(
+    name = "generate-i18n",
+    defaultPhase = LifecyclePhase.PREPARE_PACKAGE,
+    requiresDependencyResolution = ResolutionScope.RUNTIME
+)
 public final class GenerateI18NArtifacts extends AbstractCidsMojo {
 
     //~ Static fields/initializers ---------------------------------------------
